@@ -171,6 +171,7 @@ label.f textarea{resize:vertical;min-height:62px}
       <div class="spacer"></div>
       <button class="btn sm" id="btnImport">Import CSV</button>
       <button class="btn sm" id="btnReload" title="Re-read every catalog in data/">Reload</button>
+      <button class="btn sm" id="btnTrailers" title="Find dead YouTube trailer links">Trailers</button>
       <button class="btn sm" id="btnDupes">Duplicates</button>
       <button class="btn sm" id="btnBatch">Batch</button>
       <button class="btn sm" id="btnSettings">Settings</button>
@@ -590,6 +591,38 @@ $('#btnReload').onclick = async () => {
     await Promise.all([loadStats(), loadGenres(), loadList()]);
     toast(`Reloaded — ${r.stats.titles} titles from ${r.sources.length} catalog(s)`, 4000);
   }catch(e){ toast(e.message); }
+};
+
+/* ---------------- dead trailer links ---------------- */
+$('#btnTrailers').onclick = async () => {
+  toast('Checking trailer links against YouTube…', 120000);
+  try{
+    const r = await api('/api/trailers/check', {method:'POST', body:'{}'});
+    if (!r.checked){ toast('No trailer links stored yet — fetch one from TMDB first.', 5000); return; }
+    if (!r.dead.length){ toast(`All ${r.checked} trailer links are good ✓`, 4000); return; }
+    openModal(`
+      <button class="btn sm close" onclick="closeModal()">Close</button>
+      <h3>Dead trailer links</h3>
+      <p class="small">${r.dead.length} of ${r.checked} trailer links no longer work on YouTube.
+        Fix fetches a fresh official trailer when a TMDB key is set (Settings → TMDB),
+        otherwise removes the link so the caption warns you instead of posting a dead URL.</p>
+      ${r.dead.map(d=>`<div class="dupe">
+        <div class="nm">${esc(d.name)}</div><span class="small">${esc(d.url)}</span>
+      </div>`).join('')}
+      <div class="tools">
+        <button class="btn primary" id="btnFixTrailers">Fix ${r.dead.length} link(s)</button>
+      </div>`);
+    $('#btnFixTrailers').onclick = async () => {
+      toast('Fixing trailer links…', 120000);
+      try{
+        const f = await api('/api/trailers/fix', {method:'POST', body:'{}'});
+        closeModal();
+        toast(`${f.replaced.length} replaced, ${f.removed.length} removed`, 6000);
+        await loadList();
+        if (state.selected) render();
+      }catch(e){ toast('Fix failed: '+e.message, 6000); }
+    };
+  }catch(e){ toast('Trailer check failed: '+e.message, 6000); }
 };
 
 $('#btnBatch').onclick = ()=>{

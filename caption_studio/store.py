@@ -173,6 +173,38 @@ class Store:
         _save_json(self.enriched_path, self.enriched)
         self.reload()
 
+    def repair_trailer(self, name: str, replacement: Optional[str]) -> None:
+        """Drop a dead trailer link from the sidecars; optionally store a good one.
+
+        The link can live in two places — data/enriched.json (TMDB) and
+        data/overrides.json (hand-edited) — and both must be cleaned so the
+        dead URL cannot come back on the next reload.
+        """
+        key = title_key(name)
+        changed = False
+
+        override = self.overrides.get(key)
+        if override and override.get("trailer"):
+            override.pop("trailer", None)
+            if not override:
+                self.overrides.pop(key)
+            changed = True
+
+        enriched = self.enriched.get(key)
+        if enriched and enriched.get("trailer_url"):
+            enriched["trailer_url"] = replacement
+            changed = True
+        elif replacement:
+            self.enriched[key] = {"trailer_url": replacement}
+            changed = True
+
+        if changed:
+            _save_json(self.overrides_path, self.overrides)
+            _save_json(self.enriched_path, self.enriched)
+        title = self.find_by_name(name)
+        if title is not None:
+            title.trailer_url = replacement
+
     # -- lookup -----------------------------------------------------------
     def get(self, title_id: str) -> Optional[Title]:
         return self.library.get(title_id)

@@ -100,6 +100,8 @@ YouTube trailer.
    → themoviedb.org → Settings → API → paste the key into **Settings → TMDB**
    (or into `config.json`, or set the `TMDB_API_KEY` environment variable).
    Results are cached in `.tmdb_cache/`, so it works offline afterwards.
+   Trailer picks are **verified against YouTube before they're stored** — a
+   deleted video is never saved; the next candidate is tried instead.
 
 ---
 
@@ -118,6 +120,7 @@ YouTube trailer.
 | **Batch** | generate every matching caption → `out/`, plus a `.zip` and a browsable `index.html` |
 | **Import CSV** | upload a new scanner catalog — saved into `data/`, library reloads instantly |
 | **Reload** | re-read every catalog in `data/` without restarting |
+| **Trailers** | verify every stored trailer link against YouTube; fix dead ones in one click |
 | **Duplicates** | find and merge the same title filed under two names |
 | **Settings** | brand, CTA wording, every emoji, defaults, TMDB key |
 
@@ -204,6 +207,20 @@ and hand-written edits are keyed by title name and carry over.
 > `directory_path` columns and at least 50 data rows. Anything else is skipped,
 > and **Import CSV warns you when that happens** so a hand-made file never
 > disappears without a trace.
+
+### Dead trailer links
+
+TMDB's video list goes stale — videos get deleted or made private. Two
+safeguards keep dead YouTube links out of your captions:
+
+1. **At pick time:** every trailer fetched from TMDB is checked against
+   YouTube's oEmbed (free, no API key, cached in `.tmdb_cache/`). If the best
+   candidate is gone, the next one is tried; if none work, no link is stored.
+2. **For links you already have:** click **Trailers** in the top bar. It
+   verifies every stored link in parallel and lists the dead ones — **Fix**
+   replaces them with a fresh official trailer when a TMDB key is set,
+   otherwise removes them so the caption shows a *"No trailer link yet"*
+   warning instead of posting a dead URL.
 
 ---
 

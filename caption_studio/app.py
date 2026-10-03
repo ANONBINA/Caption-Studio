@@ -6,6 +6,7 @@ import json
 import os
 import re
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from typing import Annotated, Any, Dict, List, Optional
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
@@ -16,7 +17,7 @@ from .caption import CaptionOptions, build_caption, limit_report
 from .export import safe_filename, write_batch_csv, write_caption, write_index_html
 from .models import Title
 from .store import Store, title_key
-from .tmdb import TMDBClient, TMDBError
+from .tmdb import TMDBClient, TMDBError, youtube_ok
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(ROOT, "web")
@@ -317,6 +318,45 @@ def create_app(root: str = ROOT) -> FastAPI:
             patch["sections"] = {**store.config.sections, **patch["sections"]}
         store.config.update(patch)
         return get_settings()
+
+    # -- trailers --------------------------------------------------------------
+    @app.post("/api/trailers/check")
+    def trailers_check():
+        """Verify every stored trailer link against YouTube (cached per video)."""
+        urls = [(t, t.trailer_url) for t in store.library.titles if t.trailer_url]
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            verdicts = list(pool.map(youtube_ok, [u for _, u in urls]))
+        dead = [{"id": t.id, "name": t.name, "url": u}
+                for (t, u), ok in zip(urls, verdicts) if not ok]
+        return {"checked": len(urls), "ok": len(urls) - len(dead), "dead": dead}
+
+    @app.post("/api/trailers/fix")
+    def trailers_fix():
+        """Replace dead trailers with fresh TMDB picks, or remove them.
+
+        Without a TMDB key a dead link is simply cleared, which brings back
+        the caption's "No trailer link yet" warning instead of a dead URL.
+        """
+        report = trailers_check()
+        cfg = store.config
+        key = cfg.get("tmdb_api_key") or os.environ.get("TMDB_API_KEY", "")
+        client = TMDBClient(key, cfg.get("tmdb_language", "en-US")) if key else None
+        replaced, removed = [], []
+        for item in report["dead"]:
+            title = store.get(item["id"])
+            if title is None:
+                continue
+            replacement = None
+            if client is not None:
+                try:
+                    replacement = client.trailer_for(title, refresh=True)
+                except TMDBError:
+                    replacement = None
+            store.repair_trailer(title.name, replacement)
+            entry = {"id": title.id, "name": title.name, "url": replacement}
+            (replaced if replacement else removed).append(entry)
+        return {"checked": report["checked"], "dead_found": len(report["dead"]),
+                "replaced": replaced, "removed": removed}
 
     # -- catalogs ---------------------------------------------------------------
     @app.post("/api/catalogs")

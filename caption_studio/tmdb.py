@@ -15,6 +15,7 @@ import json
 import os
 import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional
@@ -36,6 +37,102 @@ _LANG = {
 
 class TMDBError(RuntimeError):
     pass
+
+
+# ---------------------------------------------------------------------------
+# YouTube validation
+# ---------------------------------------------------------------------------
+# TMDB's video list goes stale: videos get deleted, made private or
+# region-blocked.  oEmbed tells us for free (no API key) whether a video
+# still exists: 200 = alive, 400/404 = gone.
+YOUTUBE_OEMBED = "https://www.youtube.com/oembed"
+YT_CHECK_TTL_DAYS = 30
+
+# TMDB video types, best candidates for a promo link first.
+_TYPE_RANK = {"trailer": 0, "teaser": 1, "clip": 2, "featurette": 3,
+              "behind the scenes": 4, "opening credits": 5}
+
+
+def youtube_video_id(url: Optional[str]) -> Optional[str]:
+    """Pull the 11-char id out of any common YouTube URL (or a bare id).
+
+    Returns None for non-YouTube links — those can't be checked here, so
+    they are always accepted rather than dropped.
+    """
+    text = (url or "").strip()
+    if not text:
+        return None
+    match = re.search(
+        r"(?:youtu\.be/|youtube\.com/(?:watch\?(?:[^#]*&)?v=|embed/|shorts/|live/))"
+        r"([A-Za-z0-9_-]{11})", text)
+    if match:
+        return match.group(1)
+    if re.fullmatch(r"[A-Za-z0-9_-]{11}", text):
+        return text
+    return None
+
+
+def youtube_ok(video: Optional[str], cache_dir: str = CACHE_DIR,
+               ttl_days: int = YT_CHECK_TTL_DAYS, timeout: int = 8) -> bool:
+    """True unless YouTube proves the video is gone.
+
+    Unknown outcomes — network errors, rate limits, non-YouTube links — are
+    treated as OK: we only ever drop a link we can *prove* is dead.  Results
+    are cached in ``.tmdb_cache/yt_<id>.json`` so each link is checked once
+    per TTL period.
+    """
+    vid = youtube_video_id(video)
+    if not vid:
+        return True
+    os.makedirs(cache_dir, exist_ok=True)
+    cpath = os.path.join(cache_dir, f"yt_{vid}.json")
+    if os.path.exists(cpath):
+        age = time.time() - os.path.getmtime(cpath)
+        if age < ttl_days * 86400:
+            try:
+                with open(cpath, "r", encoding="utf-8") as fh:
+                    return bool(json.load(fh).get("ok"))
+            except Exception:
+                pass
+    query = urllib.parse.urlencode(
+        {"url": f"https://www.youtube.com/watch?v={vid}", "format": "json"})
+    try:
+        with urllib.request.urlopen(f"{YOUTUBE_OEMBED}?{query}", timeout=timeout) as resp:
+            code = resp.status
+    except urllib.error.HTTPError as exc:
+        code = exc.code
+    except Exception:
+        # Timeout / offline / DNS — unknown, so accept without caching.
+        return True
+    ok = code not in (400, 404)      # 200 alive; 401/403 restricted but real
+    try:
+        with open(cpath, "w", encoding="utf-8") as fh:
+            json.dump({"ok": ok, "checked": int(time.time())}, fh)
+    except Exception:
+        pass
+    return ok
+
+
+def rank_trailers(videos: Optional[List[Dict[str, Any]]],
+                  language: str = "en-US") -> List[Dict[str, Any]]:
+    """YouTube candidates worth trying, best first.
+
+    Preference: trailer > teaser > clip > …, official over fan uploads, then
+    the configured language over foreign ones (mirrors the old three-tier
+    pick, but sorted instead of hard-coded pools).
+    """
+    lang = (language or "").split("-")[0].lower()
+    yt = [v for v in (videos or [])
+          if (v.get("site") or "").lower() == "youtube" and v.get("key")]
+
+    def score(v: Dict[str, Any]):
+        vtype = (v.get("type") or "other").strip().lower()
+        official = 0 if v.get("official") else 1
+        iso = (v.get("iso_639_1") or "").strip().lower()
+        lang_penalty = 0 if (not lang or iso in (lang, "", "und")) else 1
+        return (_TYPE_RANK.get(vtype, 6), official, lang_penalty)
+
+    return sorted(yt, key=score)
 
 
 class TMDBClient:
@@ -133,24 +230,37 @@ class TMDBClient:
             pass
         return None
 
-    def _trailer(self, kind: str, tmdb_id: int) -> Optional[str]:
+    def _trailer(self, kind: str, tmdb_id: int, refresh: bool = False) -> Optional[str]:
+        """A YouTube trailer that is ranked well *and* still exists."""
         try:
-            data = self._get(f"/{kind}/{tmdb_id}/videos")
+            data = self._get(f"/{kind}/{tmdb_id}/videos",
+                             ttl_days=0 if refresh else 30)
         except Exception:
-            return None
-        videos = [v for v in (data.get("results") or [])
-                  if (v.get("site") or "").lower() == "youtube"]
-        if not videos:
-            return None
-        preferred = [v for v in videos if (v.get("type") or "").lower() == "trailer"
-                     and v.get("official")]
-        for pool in (preferred, [v for v in videos if (v.get("type") or "").lower() == "trailer"],
-                     videos):
-            if pool:
-                key = pool[0].get("key")
-                if key:
-                    return f"https://youtu.be/{key}"
+            if not refresh:
+                return None
+            try:
+                data = self._get(f"/{kind}/{tmdb_id}/videos")  # fall back to cache
+            except Exception:
+                return None
+        for candidate in rank_trailers(data.get("results") or [], self.language):
+            if youtube_ok(candidate["key"], cache_dir=self.cache_dir):
+                return f"https://youtu.be/{candidate['key']}"
         return None
+
+    def trailer_for(self, title: Title, refresh: bool = False) -> Optional[str]:
+        """Fresh, validated trailer URL for a title — None if nothing usable.
+
+        Used by the repair flow: ``refresh=True`` bypasses the 30-day TMDB
+        cache so deleted videos get a real chance at a replacement.
+        """
+        kind = "tv" if title.is_series else "movie"
+        tmdb_id = title.tmdb_id
+        if not tmdb_id:
+            hit = self.find(title)
+            if not hit:
+                return None
+            tmdb_id = int(hit["id"])
+        return self._trailer(kind, tmdb_id, refresh=refresh)
 
     def _cast(self, kind: str, tmdb_id: int, limit: int = 6) -> List[str]:
         try:

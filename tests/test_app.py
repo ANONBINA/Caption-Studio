@@ -1,12 +1,14 @@
-"""Tests for the web API, focused on catalog import."""
+"""Tests for the web API: catalog import and trailer repair."""
 from __future__ import annotations
 
 import csv
 import io
+import json
 
 from fastapi.testclient import TestClient
 
 from caption_studio.app import create_app
+from caption_studio.store import Store, title_key
 from tests.conftest import CSV_FIELDS, episode_row, write_catalog
 
 
@@ -96,3 +98,47 @@ def test_reload_endpoint_re_scans_data_dir(tmp_path):
     data = client.post("/api/reload", json={}).json()
     assert data["stats"]["titles"] == 1
     assert data["sources"] == ["later.csv"]
+
+
+# -- trailer check / fix ----------------------------------------------------------
+def _seed_dead_trailer(tmp_path) -> None:
+    """Catalog + an enriched title whose stored trailer link is dead."""
+    write_catalog(str(tmp_path / "data" / "catalog.csv"),
+                  [episode_row(season=1, ep=e) for e in range(1, 51)])
+    (tmp_path / "data" / "enriched.json").write_text(json.dumps({
+        title_key("Test Series"): {"trailer_url": "https://youtu.be/deaddeaddea"}
+    }), encoding="utf-8")
+
+
+def test_trailer_check_finds_dead_links(tmp_path, monkeypatch):
+    _seed_dead_trailer(tmp_path)
+    client = _client(tmp_path)
+    monkeypatch.setattr("caption_studio.app.youtube_ok",
+                        lambda u, **kw: "dead" not in (u or ""))
+    r = client.post("/api/trailers/check").json()
+    assert r["checked"] == 1 and r["ok"] == 0
+    assert len(r["dead"]) == 1
+    assert r["dead"][0]["name"] == "Test Series"
+
+
+def test_trailer_check_all_good(tmp_path, monkeypatch):
+    _seed_dead_trailer(tmp_path)
+    client = _client(tmp_path)
+    monkeypatch.setattr("caption_studio.app.youtube_ok", lambda u, **kw: True)
+    r = client.post("/api/trailers/check").json()
+    assert r["ok"] == 1 and r["dead"] == []
+
+
+def test_trailer_fix_removes_dead_link_without_key(tmp_path, monkeypatch):
+    _seed_dead_trailer(tmp_path)
+    monkeypatch.delenv("TMDB_API_KEY", raising=False)  # hermetic: no real TMDB call
+    client = _client(tmp_path)
+    monkeypatch.setattr("caption_studio.app.youtube_ok",
+                        lambda u, **kw: "dead" not in (u or ""))
+    f = client.post("/api/trailers/fix").json()
+    # no TMDB key in the test config -> dead link is cleared, not replaced
+    assert f["dead_found"] == 1 and len(f["removed"]) == 1 and not f["replaced"]
+    assert f["removed"][0]["name"] == "Test Series"
+    # persisted: a fresh store no longer has the dead URL
+    fresh = Store(str(tmp_path))
+    assert fresh.find_by_name("Test Series").trailer_url is None
