@@ -169,9 +169,12 @@ label.f textarea{resize:vertical;min-height:62px}
       <span class="pill" id="brandPill">—</span>
       <span class="pill" id="statsPill">loading…</span>
       <div class="spacer"></div>
+      <button class="btn sm" id="btnImport">Import CSV</button>
+      <button class="btn sm" id="btnReload" title="Re-read every catalog in data/">Reload</button>
       <button class="btn sm" id="btnDupes">Duplicates</button>
       <button class="btn sm" id="btnBatch">Batch</button>
       <button class="btn sm" id="btnSettings">Settings</button>
+      <input type="file" id="csvFile" accept=".csv,text/csv" hidden>
     </div>
     <div class="content" id="content">
       <div class="empty">Pick a title on the left to generate its caption.</div>
@@ -208,9 +211,9 @@ let state = {
 
 /* ---------------- toast ---------------- */
 let toastT;
-function toast(msg){
+function toast(msg, ms=2200){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 2200);
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), ms);
 }
 
 /* ---------------- sidebar ---------------- */
@@ -218,6 +221,7 @@ async function loadGenres(){
   try{
     state.genres = await api('/api/genres');
     const sel = $('#fGenre');
+    sel.innerHTML = '<option value="">Genre…</option>';  /* reset: reloads re-populate */
     state.genres.forEach(g=>{
       const o = document.createElement('option');
       o.value = g.name; o.textContent = `${g.name} (${g.count})`;
@@ -553,6 +557,40 @@ function openSettings(note){
 }
 
 $('#btnSettings').onclick = ()=>openSettings();
+
+/* ---------------- import / reload catalogs ---------------- */
+$('#btnImport').onclick = ()=> $('#csvFile').click();
+$('#csvFile').onchange = async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';                      /* allow re-picking the same file */
+  if (!file) return;
+  toast('Importing ' + file.name + '…', 15000);
+  const fd = new FormData();
+  fd.append('file', file);
+  try{
+    const res = await fetch('/api/catalogs', {method:'POST', body: fd});
+    if (!res.ok){
+      let msg = res.statusText;
+      try{ msg = (await res.json()).detail || msg; }catch(err){}
+      throw new Error(msg);
+    }
+    const r = await res.json();
+    await Promise.all([loadStats(), loadGenres(), loadList()]);
+    if (r.loaded)
+      toast(`Imported ${r.file} — library now ${r.stats.titles} titles`, 5000);
+    else
+      toast(`Warning: ${r.file} was skipped — it doesn't match the scanner format ` +
+            `(needs full_path, media_type, resolution_label, directory_path and ≥50 rows)`, 9000);
+  }catch(err){ toast('Import failed: ' + err.message, 6000); }
+};
+$('#btnReload').onclick = async () => {
+  toast('Reloading catalogs…', 15000);
+  try{
+    const r = await api('/api/reload', {method:'POST', body: '{}'});
+    await Promise.all([loadStats(), loadGenres(), loadList()]);
+    toast(`Reloaded — ${r.stats.titles} titles from ${r.sources.length} catalog(s)`, 4000);
+  }catch(e){ toast(e.message); }
+};
 
 $('#btnBatch').onclick = ()=>{
   openModal(`

@@ -4,10 +4,11 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import zipfile
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 
@@ -19,6 +20,21 @@ from .tmdb import TMDBClient, TMDBError
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(ROOT, "web")
+
+# Scanner CSVs are a few MB even for thousands of rows; this is just a guard
+# against someone piping a video file into the endpoint.
+MAX_CATALOG_UPLOAD_BYTES = 200 * 1024 * 1024
+
+
+def _safe_catalog_name(name: str) -> str:
+    """Reduce an uploaded filename to a safe basename inside data/."""
+    base = os.path.basename(name or "").strip()
+    base = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", base).strip(". ")
+    if not base:
+        raise HTTPException(400, "No filename provided.")
+    if not base.lower().endswith(".csv"):
+        raise HTTPException(400, "Only .csv files can be imported.")
+    return base
 
 
 class CaptionRequest(BaseModel):
@@ -302,10 +318,42 @@ def create_app(root: str = ROOT) -> FastAPI:
         store.config.update(patch)
         return get_settings()
 
+    # -- catalogs ---------------------------------------------------------------
+    @app.post("/api/catalogs")
+    async def upload_catalog(file: Annotated[UploadFile, File()]):
+        """Import a scanner CSV: save it into data/ and reload the library."""
+        name = _safe_catalog_name(file.filename or "")
+        content = await file.read()
+        if not content:
+            raise HTTPException(400, "The uploaded file is empty.")
+        if len(content) > MAX_CATALOG_UPLOAD_BYTES:
+            raise HTTPException(413, "File too large (200 MB limit).")
+        dest = os.path.join(store.root, "data", name)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "wb") as fh:
+            fh.write(content)
+        store.reload()
+        # The loader skips CSVs that don't match the scanner format — surface
+        # that to the caller instead of failing silently.
+        return {
+            "ok": True,
+            "file": name,
+            "loaded": name in store.library.sources,
+            "stats": store.stats(),
+            "sources": store.library.sources,
+        }
+
+    @app.get("/api/reload")
+    def reload_catalogs():
+        store.reload()
+        return {"ok": True, "stats": store.stats(),
+                "sources": store.library.sources}
+
     @app.post("/api/reload")
     def reload():
         store.reload()
-        return {"ok": True, "stats": store.stats()}
+        return {"ok": True, "stats": store.stats(),
+                "sources": store.library.sources}
 
     return app
 

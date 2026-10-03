@@ -116,6 +116,8 @@ YouTube trailer.
 | Edit panel | synopsis, bullets, tagline, why, cast, genres, rating, trailer, DM keyword |
 | Section toggles | switch any block of the layout on or off |
 | **Batch** | generate every matching caption → `out/`, plus a `.zip` and a browsable `index.html` |
+| **Import CSV** | upload a new scanner catalog — saved into `data/`, library reloads instantly |
+| **Reload** | re-read every catalog in `data/` without restarting |
 | **Duplicates** | find and merge the same title filed under two names |
 | **Settings** | brand, CTA wording, every emoji, defaults, TMDB key |
 
@@ -185,10 +187,23 @@ name). It flows into the "Why *Brand* Recommends It" heading and the sign-off.
 
 ## Adding a newer catalog
 
-Drop the new `catalog-*.csv` into `data/` and hit **Reload** (or restart).
+**In the web app:** click **Import CSV** in the top bar and pick the file.
+It is saved into `data/` and the library reloads automatically — search, filters
+and stats update immediately. The **Reload** button re-reads every catalog in
+`data/` without a restart.
+
+From disk instead: drop the new `catalog-*.csv` into `data/`, then hit
+**Reload** (or restart).
+
 Files are matched on their full path and the most recently scanned record wins,
 so old and new catalogs merge instead of double-counting. Your TMDB enrichment
 and hand-written edits are keyed by title name and carry over.
+
+> **If a catalog is silently ignored:** the loader only accepts scanner-format
+> CSVs — it needs the `full_path`, `media_type`, `resolution_label` and
+> `directory_path` columns and at least 50 data rows. Anything else is skipped,
+> and **Import CSV warns you when that happens** so a hand-made file never
+> disappears without a trace.
 
 ---
 
