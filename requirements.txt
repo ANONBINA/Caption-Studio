@@ -1,0 +1,5 @@
+# Web app (FastAPI + server). The CLI's caption/batch/search/stats commands
+# need nothing but the standard library — install these only for `serve`.
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9

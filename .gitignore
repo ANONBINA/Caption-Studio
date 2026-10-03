@@ -1,0 +1,29 @@
+# --- secrets / machine-local config -------------------------------------
+# config.json holds your TMDB API key and personal settings.
+# Keep it out of version control; commit config.example.json instead.
+config.json
+
+# --- private library data ------------------------------------------------
+# Your real catalog, enrichment and hand-written edits are personal data.
+data/
+
+# --- caches & generated output -------------------------------------------
+.tmdb_cache/
+out/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# --- environments & builds -----------------------------------------------
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# --- editors / OS --------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
