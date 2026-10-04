@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+release/
+config.json
+data/
+exports/
+backups/
+out/
+.tmdb_cache/
+qa/
+.env

@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "caption-studio"
+version = "1.1.0"
+description = "Turn a media-catalog CSV into scroll-stopping promo captions in your house style."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Plugent" }]
+keywords = ["captions", "social-media", "tmdb", "media-catalog", "copywriting"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Text Processing :: Markup",
+]
+# The caption/batch/search/stats CLI runs on the standard library alone.
+dependencies = []
+
+[project.optional-dependencies]
+web = [
+    "fastapi>=0.110",
+    "pydantic>=2.0",
+    "uvicorn[standard]>=0.27",
+    "python-multipart>=0.0.9",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+caption-studio = "caption_studio.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["caption_studio*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (unused imports, undefined names)
+    "I",   # import sorting
+    "B",   # bugbear (likely bugs)
+]
+# Long playbook/emoji strings in creative.py routinely exceed 100 chars.
+ignore = ["E501"]
+
+
+[tool.setuptools.package-data]
+caption_studio = ["web/*.html"]

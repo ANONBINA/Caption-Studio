@@ -1,0 +1,63 @@
+{
+  "brand": "Plugent",
+  "brand_footer_emoji": "🍿",
+  "signature": "— {brand} {emoji}",
+  "cta_template": "📩 DM \"{keyword}\" for {resolutions} ({cta_tail})",
+  "cta_tail": "flash or phone ready",
+  "cta_fallback_resolution": "720p / 1080p",
+  "icons": {
+    "title_movie": "🎬",
+    "title_series": "🎬",
+    "synopsis": "📖",
+    "expect": "🔍",
+    "bullet": "✅",
+    "specs": "📅",
+    "language": "🌐",
+    "cast": "⭐",
+    "rating": "🔞",
+    "why": "💡",
+    "trailer": "🎞️",
+    "tagline": "✨",
+    "storage": "💾",
+    "cta": "📩"
+  },
+  "default_style": "classic",
+  "default_length": "full",
+  "max_genres": 3,
+  "max_cast": 6,
+  "include_storage_line": false,
+  "include_hashtags": false,
+  "hashtag_template": "\n#{brand_clean} #{kind} #{genre_clean} #{year}",
+  "default_language": "English",
+  "sections": {
+    "genres": true,
+    "synopsis": true,
+    "expect": true,
+    "specs": true,
+    "language": true,
+    "cast": true,
+    "rating": true,
+    "why": true,
+    "trailer": true,
+    "tagline": true,
+    "cta": true,
+    "signature": true
+  },
+  "limits": {
+    "instagram": 2200,
+    "whatsapp": 1200,
+    "x": 280,
+    "facebook": 63206
+  },
+  "tmdb_api_key": "",
+  "tmdb_language": "en-US",
+  "tmdb_auto_trailer": true,
+  "catalog_glob": "data/*.csv",
+  "merge_rules": {},
+  "strip_prefixes": [
+    "Watch ",
+    "Wathc "
+  ],
+  "overrides": {}
+}
+
