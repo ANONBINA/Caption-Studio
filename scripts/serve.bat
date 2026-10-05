@@ -3,8 +3,9 @@ REM serve.bat — launch the Caption Studio web app.
 REM Re-runs setup automatically if .venv is missing.
 REM
 REM Usage:
-REM   scripts\serve.bat            Desktop mode — http://127.0.0.1:8000 (loopback only)
-REM   scripts\serve.bat --lan      Mobile mode  — binds LAN + prints a QR code for your phone
+REM   scripts\serve.bat            Desktop mode - http://127.0.0.1:8000 (loopback only)
+REM   scripts\serve.bat --lan      Mobile mode  - binds LAN + prints a QR code for your phone
+REM   scripts\serve.bat 192.168.1.50 [port]   Bind an explicit host (also mobile mode)
 REM
 REM Mobile mode:
 REM   . Detects this PC's LAN IP automatically (scripts\lan_ip.py)
@@ -27,6 +28,10 @@ set "HOST=127.0.0.1"
 if "%~1"=="--lan" (
     set "MODE=lan"
     set "HOST=0.0.0.0"
+) else if not "%~1"=="" (
+    REM Explicit host argument also enables mobile mode, mirroring serve.sh
+    set "MODE=lan"
+    set "HOST=%~1"
 )
 set "PORT=%~2"
 if "%PORT%"=="" set "PORT=8000"
