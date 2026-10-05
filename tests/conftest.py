@@ -121,7 +121,4 @@ def series():
         cast=["Siân Brooke"], rating="TV-MA", trailer_url="https://youtu.be/def",
         tagline="The job breaks you in fast.",
     )
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/master

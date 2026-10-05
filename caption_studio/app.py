@@ -1,28 +1,12 @@
 """FastAPI web app for Caption Studio."""
 from __future__ import annotations
 
-<<<<<<< HEAD
-=======
 import copy
 import csv
->>>>>>> origin/master
 import io
 import json
 import os
 import re
-<<<<<<< HEAD
-import zipfile
-from concurrent.futures import ThreadPoolExecutor
-from typing import Annotated, Any, Dict, List, Optional
-
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
-from fastapi.responses import HTMLResponse, Response
-from pydantic import BaseModel, Field
-
-from .caption import CaptionOptions, build_caption, limit_report
-from .export import safe_filename, write_batch_csv, write_caption, write_index_html
-from .models import Title
-=======
 import socket
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
@@ -41,16 +25,11 @@ from .export import safe_filename, write_batch_csv, write_caption, write_index_h
 from .jobs import JobManager
 from .models import Title
 from .providers import CaptionProvider, TemplateCaptionProvider
->>>>>>> origin/master
 from .store import Store, title_key
 from .tmdb import TMDBClient, TMDBError, youtube_ok
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-<<<<<<< HEAD
-WEB_DIR = os.path.join(ROOT, "web")
-=======
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
->>>>>>> origin/master
 
 # Scanner CSVs are a few MB even for thousands of rows; this is just a guard
 # against someone piping a video file into the endpoint.
@@ -69,15 +48,6 @@ def _safe_catalog_name(name: str) -> str:
 
 
 class CaptionRequest(BaseModel):
-<<<<<<< HEAD
-    variant: int = 0
-    style: Optional[str] = None
-    length: Optional[str] = None
-    expect_count: int = 4
-    sections: Dict[str, bool] = Field(default_factory=dict)
-    overrides: Dict[str, Any] = Field(default_factory=dict)
-
-=======
     variant: int = Field(0, ge=0, le=10000)
     style: Optional[Literal["classic", "extended"]] = None
     length: Optional[Literal["full", "short", "teaser"]] = None
@@ -98,7 +68,6 @@ class CaptionRequest(BaseModel):
                 raise ValueError("Overrides must be text or section switches")
         return value
 
->>>>>>> origin/master
 
 class OverrideRequest(BaseModel):
     dm_keyword: Optional[str] = None
@@ -117,20 +86,6 @@ class SettingsRequest(BaseModel):
     cta_tail: Optional[str] = None
     icons: Optional[Dict[str, str]] = None
     sections: Optional[Dict[str, bool]] = None
-<<<<<<< HEAD
-    default_style: Optional[str] = None
-    default_length: Optional[str] = None
-    include_hashtags: Optional[bool] = None
-    tmdb_api_key: Optional[str] = None
-    default_language: Optional[str] = None
-    max_cast: Optional[int] = None
-    max_genres: Optional[int] = None
-
-
-def create_app(root: str = ROOT) -> FastAPI:
-    app = FastAPI(title="Caption Studio", docs_url="/api/docs")
-    store = Store(root)
-=======
     default_style: Optional[Literal["classic", "extended"]] = None
     default_length: Optional[Literal["full", "short", "teaser"]] = None
     include_hashtags: Optional[bool] = None
@@ -207,7 +162,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
     def health():
         return {"status": "ok", "version": "1.1.0", "mode": "trusted-local",
                 "titles": len(store.library.titles), "caption_provider": provider.name}
->>>>>>> origin/master
 
     def _title(tid: str) -> Title:
         t = store.get(tid)
@@ -221,19 +175,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
         data["overrides"] = store.overrides.get(title_key(t.name), {})
         return data
 
-<<<<<<< HEAD
-    def _caption_payload(t: Title, req: CaptionRequest):
-        opts = CaptionOptions.from_dict(req.model_dump(), store.config)
-        # Hand-edited copy lives in data/overrides.json; feed it in unless the
-        # caller supplied its own value for this run.
-        stored = store.overrides.get(title_key(t.name), {})
-        for key in ("why", "cta", "tagline", "synopsis"):
-            if stored.get(key) and not opts.overrides.get(key):
-                opts.overrides[key] = stored[key]
-        if stored.get("bullets") and not opts.overrides.get("bullets"):
-            opts.overrides["bullets"] = stored["bullets"]
-        caption = build_caption(t, store.config, opts)
-=======
     def _build(t: Title, req: CaptionRequest, config=None, overrides=None):
         config = config or store.config
         opts = CaptionOptions.from_dict(req.model_dump(), config)
@@ -245,7 +186,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
 
     def _caption_payload(t: Title, req: CaptionRequest):
         caption, opts = _build(t, req)
->>>>>>> origin/master
         return {
             "text": caption.text,
             "hashtags": caption.hashtags,
@@ -273,19 +213,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
         return store.stats()
 
     @app.get("/api/titles")
-<<<<<<< HEAD
-    def titles(q: str = "", kind: str = "", genre: str = "", resolution: str = "",
-               limit: int = Query(60, le=500), offset: int = 0, sort: str = "name"):
-        results, total = store.library.search(q, kind, genre, resolution, limit, offset)
-        if sort == "year":
-            results = sorted(results, key=lambda t: -(t.year or 0))
-        elif sort == "size":
-            results = sorted(results, key=lambda t: -t.total_bytes)
-        elif sort == "newest":
-            results = sorted(results, key=lambda t: -(t.year or 0))
-        return {"total": total, "count": len(results),
-                "items": [t.to_dict() for t in results]}
-=======
     def titles(q: str = Query("", max_length=300), kind: str = "", genre: str = "",
                resolution: str = "", limit: int = Query(60, ge=1, le=500),
                offset: int = Query(0, ge=0),
@@ -311,7 +238,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
     def facets():
         return {"languages": sorted({v for t in store.library.titles for v in t.audio_languages}),
                 "resolutions": sorted({v for t in store.library.titles for v in t.resolutions})}
->>>>>>> origin/master
 
     @app.get("/api/titles/{tid}")
     def get_title(tid: str):
@@ -327,15 +253,10 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
         return _caption_payload(_title(tid), req)
 
     @app.get("/api/caption/{tid}")
-<<<<<<< HEAD
-    def caption_get(tid: str, variant: int = 0, style: str = "", length: str = "",
-                    expect_count: int = 4):
-=======
     def caption_get(tid: str, variant: int = Query(0, ge=0, le=10000),
                     style: Literal["", "classic", "extended"] = "",
                     length: Literal["", "full", "short", "teaser"] = "",
                     expect_count: int = Query(4, ge=1, le=12)):
->>>>>>> origin/master
         req = CaptionRequest(variant=variant, style=style or None, length=length or None,
                              expect_count=expect_count)
         return _caption_payload(_title(tid), req)
@@ -343,29 +264,17 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
     @app.post("/api/caption/{tid}/save")
     def save_caption(tid: str, req: CaptionRequest):
         t = _title(tid)
-<<<<<<< HEAD
-        cap = build_caption(t, store.config, CaptionOptions.from_dict(req.model_dump(),
-                                                                     store.config))
-        out_dir = os.path.join(store.root, "out")
-        os.makedirs(out_dir, exist_ok=True)
-        path = os.path.join(out_dir, safe_filename(t.name, "txt"))
-=======
         cap, _ = _build(t, req)
         out_dir = os.path.join(store.root, "out")
         os.makedirs(out_dir, exist_ok=True)
         path = os.path.join(out_dir, t.id + "_" + safe_filename(t.name, "txt"))
->>>>>>> origin/master
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(cap.text)
         return {"path": path}
 
     @app.post("/api/batch")
-<<<<<<< HEAD
-    def batch(payload: dict):
-=======
     def batch(request: ExportRequest):
         payload = request.model_dump()
->>>>>>> origin/master
         ids = payload.get("ids") or []
         if not ids:
             q = payload.get("q", "")
@@ -378,12 +287,7 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
         req = CaptionRequest(**(payload.get("options") or {}))
         pairs = []
         for t in titles:
-<<<<<<< HEAD
-            cap = build_caption(t, store.config,
-                                CaptionOptions.from_dict(req.model_dump(), store.config))
-=======
             cap, _ = _build(t, req)
->>>>>>> origin/master
             pairs.append((t, cap))
             write_caption(cap, os.path.join(store.root, "out"), ["txt"], t, store.config.brand)
         out_dir = os.path.join(store.root, "out")
@@ -399,23 +303,14 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
         }
 
     @app.get("/api/batch/download")
-<<<<<<< HEAD
-    def batch_download(q: str = "", kind: str = "", limit: int = 500):
-=======
     def batch_download(q: str = "", kind: str = "", limit: int = Query(500, ge=1, le=5000)):
->>>>>>> origin/master
         results, _ = store.library.search(q, kind, "", "", limit, 0)
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
             manifest = []
             for t in results:
-<<<<<<< HEAD
-                cap = build_caption(t, store.config, CaptionOptions.from_dict({}, store.config))
-                zf.writestr(safe_filename(t.name, "txt"), cap.text)
-=======
                 cap, _ = _build(t, CaptionRequest())
                 zf.writestr(t.id + "_" + safe_filename(t.name, "txt"), cap.text)
->>>>>>> origin/master
                 manifest.append({"title": t.name, "chars": cap.char_count,
                                  "warnings": cap.warnings})
             zf.writestr("_manifest.json", json.dumps(manifest, indent=2, ensure_ascii=False))
@@ -423,8 +318,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
         return Response(buf.getvalue(), media_type="application/zip",
                         headers={"Content-Disposition": 'attachment; filename="captions.zip"'})
 
-<<<<<<< HEAD
-=======
     # -- persistent background exports ----------------------------------------
     @app.post("/api/jobs", status_code=202)
     def create_job(req: ExportRequest):
@@ -491,7 +384,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
         except (ValueError, KeyError, zipfile.BadZipFile) as exc:
             raise HTTPException(400, "Invalid backup; restore was not completed.") from exc
 
->>>>>>> origin/master
     # -- overrides ---------------------------------------------------------
     @app.post("/api/titles/{tid}/override")
     def set_override(tid: str, req: OverrideRequest):
@@ -591,12 +483,8 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
             patch["icons"] = {**store.config.icons, **patch["icons"]}
         if "sections" in patch:
             patch["sections"] = {**store.config.sections, **patch["sections"]}
-<<<<<<< HEAD
-        store.config.update(patch)
-=======
         with store._lock:
             store.config.update(patch)
->>>>>>> origin/master
         return get_settings()
 
     # -- trailers --------------------------------------------------------------
@@ -643,26 +531,15 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
     async def upload_catalog(file: Annotated[UploadFile, File()]):
         """Import a scanner CSV: save it into data/ and reload the library."""
         name = _safe_catalog_name(file.filename or "")
-<<<<<<< HEAD
-        content = await file.read()
-=======
         content = bytearray()
         while chunk := await file.read(1024 * 1024):
             content.extend(chunk)
             if len(content) > MAX_CATALOG_UPLOAD_BYTES:
                 raise HTTPException(413, "File too large (200 MB limit).")
->>>>>>> origin/master
         if not content:
             raise HTTPException(400, "The uploaded file is empty.")
         if len(content) > MAX_CATALOG_UPLOAD_BYTES:
             raise HTTPException(413, "File too large (200 MB limit).")
-<<<<<<< HEAD
-        dest = os.path.join(store.root, "data", name)
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
-        with open(dest, "wb") as fh:
-            fh.write(content)
-        store.reload()
-=======
         try:
             # Reject malformed encoding before replacing an existing catalog.
             next(csv.reader(io.StringIO(content.decode("utf-8-sig"))))
@@ -682,7 +559,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
             finally:
                 if os.path.exists(temporary):
                     os.unlink(temporary)
->>>>>>> origin/master
         # The loader skips CSVs that don't match the scanner format — surface
         # that to the caller instead of failing silently.
         return {
@@ -693,10 +569,6 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
             "sources": store.library.sources,
         }
 
-<<<<<<< HEAD
-    @app.get("/api/reload")
-=======
->>>>>>> origin/master
     def reload_catalogs():
         store.reload()
         return {"ok": True, "stats": store.stats(),
@@ -713,9 +585,5 @@ def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = N
 
 if __name__ == "__main__":
     import uvicorn
-<<<<<<< HEAD
-    uvicorn.run(create_app(), host="0.0.0.0", port=8000, log_level="info")
-=======
     uvicorn.run(create_app(), host="127.0.0.1", port=8000, log_level="info")
 
->>>>>>> origin/master

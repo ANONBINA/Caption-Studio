@@ -9,13 +9,9 @@ import glob
 import json
 import os
 import re
-<<<<<<< HEAD
-import threading
-=======
 import tempfile
 import threading
 from functools import wraps
->>>>>>> origin/master
 from typing import Any, Dict, List, Optional
 
 from .catalog import Library, duplicate_candidates
@@ -37,12 +33,6 @@ def _load_json(path: str) -> Dict[str, Any]:
 
 def _save_json(path: str, data: Dict[str, Any]) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
-<<<<<<< HEAD
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2, ensure_ascii=False)
-    os.replace(tmp, path)
-=======
     fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -61,7 +51,6 @@ def synchronized(method):
         with self._lock:
             return method(self, *args, **kwargs)
     return wrapped
->>>>>>> origin/master
 
 
 def title_key(name: str) -> str:
@@ -83,18 +72,11 @@ class Store:
         self.enriched: Dict[str, Any] = _load_json(self.enriched_path)
         self.overrides: Dict[str, Any] = _load_json(self.overrides_path)
         self.library: Library = Library([], [])
-<<<<<<< HEAD
-        self._lock = threading.Lock()
-        self.reload()
-
-    # -- lifecycle --------------------------------------------------------
-=======
         self._lock = threading.RLock()
         self.reload()
 
     # -- lifecycle --------------------------------------------------------
     @synchronized
->>>>>>> origin/master
     def reload(self) -> None:
         # catalog_glob may be relative ("data/*.csv") — resolve it against the
         # store's root, never the current working directory.
@@ -154,10 +136,7 @@ class Store:
     CLEARABLE = {"bullets", "genres", "cast"}
 
     # -- persistence -------------------------------------------------------
-<<<<<<< HEAD
-=======
     @synchronized
->>>>>>> origin/master
     def save_enriched(self, title: Title) -> None:
         key = title_key(title.name)
         self.enriched[key] = {
@@ -170,10 +149,7 @@ class Store:
         }
         _save_json(self.enriched_path, self.enriched)
 
-<<<<<<< HEAD
-=======
     @synchronized
->>>>>>> origin/master
     def save_override(self, name: str, patch: Dict[str, Any]) -> None:
         key = title_key(name)
         entry = self.overrides.setdefault(key, {})
@@ -196,10 +172,7 @@ class Store:
             if entry.get("trailer"):
                 t.trailer_url = entry["trailer"]
 
-<<<<<<< HEAD
-=======
     @synchronized
->>>>>>> origin/master
     def clear_override(self, name: str, fields: Optional[List[str]] = None) -> None:
         key = title_key(name)
         if key not in self.overrides:
@@ -214,20 +187,14 @@ class Store:
         _save_json(self.overrides_path, self.overrides)
         self.reload()
 
-<<<<<<< HEAD
-=======
     @synchronized
->>>>>>> origin/master
     def forget_enrichment(self, name: str) -> None:
         key = title_key(name)
         self.enriched.pop(key, None)
         _save_json(self.enriched_path, self.enriched)
         self.reload()
 
-<<<<<<< HEAD
-=======
     @synchronized
->>>>>>> origin/master
     def repair_trailer(self, name: str, replacement: Optional[str]) -> None:
         """Drop a dead trailer link from the sidecars; optionally store a good one.
 
@@ -275,10 +242,7 @@ class Store:
     def duplicates(self, cutoff: float = 0.9) -> List[dict]:
         return duplicate_candidates(self.library.titles, cutoff=cutoff)
 
-<<<<<<< HEAD
-=======
     @synchronized
->>>>>>> origin/master
     def merge(self, keep_id: str, merge_id: str) -> None:
         keep, other = self.get(keep_id), self.get(merge_id)
         if keep is None or other is None:
@@ -294,7 +258,4 @@ class Store:
         s["enriched"] = sum(1 for t in self.library.titles if t.enriched)
         s["overridden"] = len(self.overrides)
         return s
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/master

@@ -119,7 +119,4 @@ def sort_resolutions(values: List[str]) -> List[str]:
         if v and v not in seen:
             seen.append(v)
     return sorted(seen, key=lambda v: (RESOLUTION_ORDER.get(v.lower(), 0), v))
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/master

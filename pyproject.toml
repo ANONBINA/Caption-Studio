@@ -4,17 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "caption-studio"
-<<<<<<< HEAD
-version = "1.0.0"
-description = "Turn a media-catalog CSV into scroll-stopping promo captions in your house style."
-readme = "README.md"
-requires-python = ">=3.9"
-=======
 version = "1.1.0"
 description = "Turn a media-catalog CSV into scroll-stopping promo captions in your house style."
 readme = "README.md"
 requires-python = ">=3.10"
->>>>>>> origin/master
 authors = [{ name = "Plugent" }]
 keywords = ["captions", "social-media", "tmdb", "media-catalog", "copywriting"]
 classifiers = [
@@ -24,10 +17,6 @@ classifiers = [
     "Intended Audience :: End Users/Desktop",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-<<<<<<< HEAD
-    "Programming Language :: Python :: 3.9",
-=======
->>>>>>> origin/master
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -40,10 +29,7 @@ dependencies = []
 [project.optional-dependencies]
 web = [
     "fastapi>=0.110",
-<<<<<<< HEAD
-=======
     "pydantic>=2.0",
->>>>>>> origin/master
     "uvicorn[standard]>=0.27",
     "python-multipart>=0.0.9",
 ]
@@ -77,10 +63,7 @@ select = [
 ]
 # Long playbook/emoji strings in creative.py routinely exceed 100 chars.
 ignore = ["E501"]
-<<<<<<< HEAD
-=======
 
 
 [tool.setuptools.package-data]
 caption_studio = ["web/*.html"]
->>>>>>> origin/master

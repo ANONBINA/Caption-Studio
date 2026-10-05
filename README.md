@@ -1,14 +1,11 @@
 # Caption Studio
 
-<<<<<<< HEAD
-=======
 ## Version 1.1 — local-workspace upgrade
 
 See [START_HERE.md](START_HERE.md) for setup, verification, recovery, security limits,
 and the implementation status of the broader roadmap.
 
 
->>>>>>> origin/master
 Turns your media-catalog CSVs into scroll-stopping promo captions in the exact
 house style of your reference post — same emojis, same section order, same
 call-to-action.
@@ -47,17 +44,6 @@ This is the sitcom that redefined family comedy with its chaotic energy…
 
 ## Quick start
 
-<<<<<<< HEAD
-```bash
-pip install -e ".[web]"          # editable install, incl. web dependencies
-
-# Web app (recommended) — http://localhost:8000
-caption-studio serve
-
-# ...or straight from the command line
-caption-studio caption "Malcolm In The Middle"
-
-=======
 **One-command setup** (creates the venv, installs everything, copies config —
 safe to re-run; it only does the steps that are still missing):
 
@@ -89,7 +75,6 @@ caption-studio caption "Malcolm In The Middle"
 # Manual route, if you'd rather do it yourself:
 #   python -m venv .venv && .venv/Scripts/activate (Windows) or source .venv/bin/activate
 #   pip install -e ".[web]"
->>>>>>> origin/master
 # (CLI-only install, no web app: pip install -e .)
 # (still works too: python -m caption_studio.cli ...)
 ```
@@ -99,8 +84,6 @@ caption, copy it. No setup, no API key required.
 
 ---
 
-<<<<<<< HEAD
-=======
 ## Desktop and mobile
 
 The web UI is responsive — it works on desktop and phone browsers alike. The
@@ -162,7 +145,6 @@ gives you the phone URL on port 9000.
 
 ---
 
->>>>>>> origin/master
 ## What it does with your catalog
 
 Your scanner writes **one row per video file**. Caption Studio folds that into
@@ -334,8 +316,6 @@ safeguards keep dead YouTube links out of your captions:
 ## Development
 
 ```bash
-<<<<<<< HEAD
-=======
 bash scripts/setup.sh --dev       # one-time: app + dev tools (pytest, ruff)
 
 bash scripts/test.sh              # pytest + ruff — same as CI
@@ -346,7 +326,6 @@ bash scripts/serve.sh             # try your changes in the web app
 Equivalent manual commands:
 
 ```bash
->>>>>>> origin/master
 pip install -e ".[web,dev]"       # app + dev tools (pytest, ruff)
 
 pytest                            # run the test suite
@@ -374,14 +353,9 @@ caption_studio/
   export.py      .txt / .md / .html / .csv / .zip output
   cli.py         command-line interface
   app.py         FastAPI web app
-<<<<<<< HEAD
-web/index.html   single-file UI (no CDNs, works offline)
-tests/           pytest suite: config, catalog folding, captions, store
-=======
   web/index.html packaged single-file UI (no CDNs, works offline)
 tests/           pytest suite: config, catalog folding, captions, store
 scripts/         setup / serve / test helpers (bash + Windows .bat, + lan_ip.py and print_qr.py helpers)
->>>>>>> origin/master
 config.example.json   template config for fresh clones
 data/            catalogs + enriched.json + overrides.json (git-ignored)
 out/            generated captions (git-ignored)
@@ -390,17 +364,11 @@ out/            generated captions (git-ignored)
 
 ## Requirements
 
-<<<<<<< HEAD
-Python 3.9+. `pip install -e ".[web]"` pulls in `fastapi`, `uvicorn` and
-=======
 Python 3.10+. `pip install -e ".[web]"` pulls in `fastapi`, `uvicorn` and
->>>>>>> origin/master
 `python-multipart` for the web app (`requirements.txt` still works for a
 plain `pip install -r`). The CLI's `caption`, `batch`, `search` and `stats`
 commands run on the standard library alone — install FastAPI only if you want
 the web app.
-<<<<<<< HEAD
-=======
 
 Optional extras: `qrcode` (installed by `setup.sh --qrcode` / `setup.bat
 --qrcode`) enables the scannable QR code in mobile mode; `pytest` + `ruff`
@@ -408,4 +376,3 @@ Optional extras: `qrcode` (installed by `setup.sh --qrcode` / `setup.bat
 python.org is recommended — the Microsoft Store `python` alias is a stub the
 setup scripts detect and work around via the `py` launcher.
 
->>>>>>> origin/master

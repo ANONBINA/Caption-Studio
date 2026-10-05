@@ -77,8 +77,6 @@ def write_caption(caption: Caption, out_dir: str, formats: Iterable[str] = ("txt
     return written
 
 
-<<<<<<< HEAD
-=======
 def spreadsheet_safe(value):
     """Prevent formula execution when an exported CSV is opened in a spreadsheet."""
     if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
@@ -86,7 +84,6 @@ def spreadsheet_safe(value):
     return value
 
 
->>>>>>> origin/master
 def write_batch_csv(pairs: List[Tuple[Title, Caption]], path: str) -> str:
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="") as fh:
@@ -96,17 +93,10 @@ def write_batch_csv(pairs: List[Tuple[Title, Caption]], path: str) -> str:
                          "warnings", "caption"])
         for t, c in pairs:
             from .creative import dm_keyword
-<<<<<<< HEAD
-            writer.writerow([t.name, t.kind_label, t.year_label, " | ".join(t.genres),
-                             " / ".join(t.resolutions), t.seasons, t.episodes,
-                             dm_keyword(t), c.char_count,
-                             "; ".join(c.warnings), c.text])
-=======
             writer.writerow([spreadsheet_safe(v) for v in [t.name, t.kind_label, t.year_label, " | ".join(t.genres),
                              " / ".join(t.resolutions), t.seasons, t.episodes,
                              dm_keyword(t), c.char_count,
                              "; ".join(c.warnings), c.text]])
->>>>>>> origin/master
     return path
 
 
@@ -147,7 +137,4 @@ def write_index_html(pairs: List[Tuple[Title, Caption]], path: str, brand: str =
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(page)
     return path
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/master

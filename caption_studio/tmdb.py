@@ -372,7 +372,4 @@ class TMDBClient:
         return {"title": title.name, "tmdb_id": tmdb_id,
                 "matched": hit.get("name") or hit.get("title"),
                 "changed": changed}
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/master

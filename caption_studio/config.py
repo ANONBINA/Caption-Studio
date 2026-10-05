@@ -125,14 +125,8 @@ class Config:
         return cfg
 
     def save(self) -> None:
-<<<<<<< HEAD
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        with open(self.path, "w", encoding="utf-8") as fh:
-            json.dump(self.data, fh, indent=2, ensure_ascii=False)
-=======
         from .store import _save_json
         _save_json(self.path, self.data)
->>>>>>> origin/master
 
     # -- access -----------------------------------------------------------
     def get(self, key: str, default: Any = None) -> Any:
@@ -162,7 +156,4 @@ class Config:
     def update(self, patch: Dict[str, Any]) -> None:
         self.data = _deep_merge(self.data, patch)
         self.save()
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/master
