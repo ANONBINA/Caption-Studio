@@ -44,21 +44,41 @@ This is the sitcom that redefined family comedy with its chaotic energy…
 
 ## Quick start
 
+**One-command setup** (creates the venv, installs everything, copies config — safe to re-run):
+
 ```bash
-pip install -e ".[web]"          # editable install, incl. web dependencies
+bash scripts/setup.sh --dev --qrcode   # add pytest/ruff + QR support
+scripts\setup.bat --dev --qrcode       # Windows CMD
+```
 
-# Web app (recommended) — http://localhost:8000
+Then run it:
+
+```bash
+bash scripts/serve.sh        # web app — http://localhost:8000
+scripts\serve.bat            # Windows CMD
+bash scripts/serve.sh --lan  # mobile too — prints a QR + URL for your phone
+scripts\serve.bat --lan      # Windows CMD, mobile mode
+bash scripts/test.sh         # pytest + ruff
+
+# ...or straight from the command line (any shell, after setup)
 caption-studio serve
-
-# ...or straight from the command line
 caption-studio caption "Malcolm In The Middle"
 
+# Manual route, if you'd rather do it yourself:
+#   python -m venv .venv && .venv/Scripts/activate (Windows) or source .venv/bin/activate
+#   pip install -e ".[web]"
 # (CLI-only install, no web app: pip install -e .)
 # (still works too: python -m caption_studio.cli ...)
 ```
 
 The web app is the fastest route: search your library, click a title, get a
 caption, copy it. No setup, no API key required.
+
+**Mobile mode** (`--lan`) detects your PC's LAN IP, whitelists it with the app's
+host validation, and prints a scannable QR code (if `--qrcode` was installed).
+Open the URL on a phone connected to the same Wi-Fi. Remember: there is no
+login — every device that can reach it can read and change the library, so use
+it on a trusted network only and click **Allow** on the Windows Firewall prompt.
 
 ---
 
