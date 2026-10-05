@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # --- secrets / machine-local config -------------------------------------
 # config.json holds your TMDB API key and personal settings.
 # Keep it out of version control; commit config.example.json instead.
@@ -10,10 +11,14 @@ data/
 # --- caches & generated output -------------------------------------------
 .tmdb_cache/
 out/
+=======
+.venv/
+>>>>>>> origin/master
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+<<<<<<< HEAD
 
 # --- environments & builds -----------------------------------------------
 .venv/
@@ -27,3 +32,17 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+=======
+*.egg-info/
+build/
+dist/
+release/
+config.json
+data/
+exports/
+backups/
+out/
+.tmdb_cache/
+qa/
+.env
+>>>>>>> origin/master

@@ -282,7 +282,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     p.set_defaults(func=cmd_merge)
 
     p = sub.add_parser("serve", help="run the web app")
+<<<<<<< HEAD
     p.add_argument("--host", default="0.0.0.0")
+=======
+    p.add_argument("--host", default="127.0.0.1")
+>>>>>>> origin/master
     p.add_argument("--port", type=int, default=8000)
     p.set_defaults(func=cmd_serve)
 
@@ -292,3 +296,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

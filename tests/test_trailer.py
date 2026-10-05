@@ -207,3 +207,7 @@ def test_repair_stores_valid_replacement(store):
     assert store.find_by_name("Test Series").trailer_url == "https://youtu.be/alivealive12"
     fresh = Store(store.root)
     assert fresh.find_by_name("Test Series").trailer_url == "https://youtu.be/alivealive12"
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

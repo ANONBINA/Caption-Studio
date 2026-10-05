@@ -122,3 +122,7 @@ def test_reload_picks_up_new_catalog(store, tmp_path):
     store.reload()
     assert len(store.library.titles) > before
     assert store.find_by_name("New Show") is not None
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

@@ -142,3 +142,7 @@ def test_trailer_fix_removes_dead_link_without_key(tmp_path, monkeypatch):
     # persisted: a fresh store no longer has the dead URL
     fresh = Store(str(tmp_path))
     assert fresh.find_by_name("Test Series").trailer_url is None
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

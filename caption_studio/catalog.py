@@ -383,11 +383,22 @@ class Library:
         return [s[3] for s in scored[:limit]]
 
     def search(self, query: str = "", kind: str = "", genre: str = "",
+<<<<<<< HEAD
                resolution: str = "", limit: int = 100, offset: int = 0) -> Tuple[List[Title], int]:
         results = self.titles
         if query.strip():
             q = _slug(query)
             results = [t for t in results if q in _slug(t.name)]
+=======
+               resolution: str = "", limit: int = 100, offset: int = 0,
+               sort: str = "name", year_min: Optional[int] = None,
+               year_max: Optional[int] = None, language: str = "",
+               enriched: Optional[bool] = None) -> Tuple[List[Title], int]:
+        results = self.titles
+        if query.strip():
+            q = _slug(query)
+            results = [t for t in results if q in _slug(t.search_blob)]
+>>>>>>> origin/master
         if kind:
             results = [t for t in results if t.kind == kind]
         if genre:
@@ -396,7 +407,27 @@ class Library:
         if resolution:
             r = resolution.lower()
             results = [t for t in results if r in [x.lower() for x in t.resolutions]]
+<<<<<<< HEAD
         return results[offset:offset + limit], len(results)
+=======
+        if year_min is not None:
+            results = [t for t in results if t.year and t.year >= year_min]
+        if year_max is not None:
+            results = [t for t in results if t.year and t.year <= year_max]
+        if language:
+            results = [t for t in results if language.casefold() in
+                       [x.casefold() for x in t.audio_languages]]
+        if enriched is not None:
+            results = [t for t in results if t.enriched == enriched]
+        keys = {
+            "name": lambda t: (t.name.casefold(), t.id),
+            "year": lambda t: (-(t.year or 0), t.name.casefold(), t.id),
+            "newest": lambda t: (-(t.year or 0), t.name.casefold(), t.id),
+            "size": lambda t: (-t.total_bytes, t.name.casefold(), t.id),
+        }
+        results = sorted(results, key=keys.get(sort, keys["name"]))
+        return results[max(0, offset):max(0, offset) + max(0, limit)], len(results)
+>>>>>>> origin/master
 
     def all_genres(self) -> List[Tuple[str, int]]:
         counts: Dict[str, int] = defaultdict(int)
@@ -632,3 +663,7 @@ def duplicate_candidates(titles: List[Title], cutoff: float = 0.9, limit: int = 
                               "score": round(ratio, 3)})
     pairs.sort(key=lambda p: -p["score"])
     return pairs[:limit]
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

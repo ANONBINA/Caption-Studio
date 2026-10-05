@@ -1,10 +1,16 @@
 """FastAPI web app for Caption Studio."""
 from __future__ import annotations
 
+<<<<<<< HEAD
+=======
+import copy
+import csv
+>>>>>>> origin/master
 import io
 import json
 import os
 import re
+<<<<<<< HEAD
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from typing import Annotated, Any, Dict, List, Optional
@@ -16,11 +22,35 @@ from pydantic import BaseModel, Field
 from .caption import CaptionOptions, build_caption, limit_report
 from .export import safe_filename, write_batch_csv, write_caption, write_index_html
 from .models import Title
+=======
+import socket
+import zipfile
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
+from typing import Annotated, Any, Dict, List, Literal, Optional
+from urllib.parse import urlsplit
+
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from pydantic import BaseModel, Field, field_validator
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from .backups import Backups
+from .caption import CaptionOptions, limit_report
+from .export import safe_filename, write_batch_csv, write_caption, write_index_html
+from .jobs import JobManager
+from .models import Title
+from .providers import CaptionProvider, TemplateCaptionProvider
+>>>>>>> origin/master
 from .store import Store, title_key
 from .tmdb import TMDBClient, TMDBError, youtube_ok
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+<<<<<<< HEAD
 WEB_DIR = os.path.join(ROOT, "web")
+=======
+WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
+>>>>>>> origin/master
 
 # Scanner CSVs are a few MB even for thousands of rows; this is just a guard
 # against someone piping a video file into the endpoint.
@@ -39,6 +69,7 @@ def _safe_catalog_name(name: str) -> str:
 
 
 class CaptionRequest(BaseModel):
+<<<<<<< HEAD
     variant: int = 0
     style: Optional[str] = None
     length: Optional[str] = None
@@ -46,6 +77,28 @@ class CaptionRequest(BaseModel):
     sections: Dict[str, bool] = Field(default_factory=dict)
     overrides: Dict[str, Any] = Field(default_factory=dict)
 
+=======
+    variant: int = Field(0, ge=0, le=10000)
+    style: Optional[Literal["classic", "extended"]] = None
+    length: Optional[Literal["full", "short", "teaser"]] = None
+    expect_count: int = Field(4, ge=1, le=12)
+    sections: Dict[str, bool] = Field(default_factory=dict)
+    overrides: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("overrides")
+    @classmethod
+    def validate_overrides(cls, value):
+        for key, item in value.items():
+            if key == "bullets":
+                if not isinstance(item, list) or len(item) > 30 or any(
+                    not isinstance(v, str) or len(v) > 2000 for v in item
+                ):
+                    raise ValueError("bullets must be a list of up to 30 short strings")
+            elif not isinstance(item, (str, bool)) or (isinstance(item, str) and len(item) > 20000):
+                raise ValueError("Overrides must be text or section switches")
+        return value
+
+>>>>>>> origin/master
 
 class OverrideRequest(BaseModel):
     dm_keyword: Optional[str] = None
@@ -64,6 +117,7 @@ class SettingsRequest(BaseModel):
     cta_tail: Optional[str] = None
     icons: Optional[Dict[str, str]] = None
     sections: Optional[Dict[str, bool]] = None
+<<<<<<< HEAD
     default_style: Optional[str] = None
     default_length: Optional[str] = None
     include_hashtags: Optional[bool] = None
@@ -76,6 +130,84 @@ class SettingsRequest(BaseModel):
 def create_app(root: str = ROOT) -> FastAPI:
     app = FastAPI(title="Caption Studio", docs_url="/api/docs")
     store = Store(root)
+=======
+    default_style: Optional[Literal["classic", "extended"]] = None
+    default_length: Optional[Literal["full", "short", "teaser"]] = None
+    include_hashtags: Optional[bool] = None
+    tmdb_api_key: Optional[str] = None
+    default_language: Optional[str] = None
+    max_cast: Optional[int] = Field(None, ge=0, le=30)
+    max_genres: Optional[int] = Field(None, ge=0, le=10)
+
+
+class ExportRequest(BaseModel):
+    ids: List[str] = Field(default_factory=list, max_length=5000)
+    q: str = Field("", max_length=300)
+    kind: Literal["", "movie", "series"] = ""
+    genre: str = ""
+    resolution: str = ""
+    limit: int = Field(1000, ge=1, le=5000)
+    options: CaptionRequest = Field(default_factory=CaptionRequest)
+    formats: List[Literal["txt", "md", "html", "json", "csv"]] = Field(
+        default_factory=lambda: ["txt", "csv"], min_length=1, max_length=5)
+
+
+class RestoreRequest(BaseModel):
+    confirm: Literal["RESTORE"]
+
+
+def create_app(root: str = ROOT, caption_provider: Optional[CaptionProvider] = None) -> FastAPI:
+    store = Store(root)
+    provider = caption_provider or TemplateCaptionProvider()
+    backups = Backups(store)
+    jobs = JobManager(root)
+
+    @asynccontextmanager
+    async def lifespan(app):
+        # A daily startup snapshot, plus pre-import snapshots, works without a scheduler.
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).strftime("%Y%m%d")
+        if not any(item["id"].startswith(today) for item in backups.list()):
+            backups.create("daily-startup")
+        try:
+            yield
+        finally:
+            jobs.close()
+
+    app = FastAPI(title="Caption Studio", version="1.1.0", docs_url="/api/docs",
+                  lifespan=lifespan)
+    allowed_hosts = ["localhost", "127.0.0.1", "[::1]", "testserver", "*.e2b.app",
+                     socket.gethostname()]
+    try:
+        allowed_hosts.extend(socket.gethostbyname_ex(socket.gethostname())[2])
+    except OSError:
+        pass
+    allowed_hosts.extend(h.strip() for h in os.environ.get(
+        "CAPTION_STUDIO_ALLOWED_HOSTS", "").split(",") if h.strip())
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+    app.state.store = store
+    app.state.jobs = jobs
+
+    @app.middleware("http")
+    async def local_security(request, call_next):
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            origin = request.headers.get("origin")
+            if origin and urlsplit(origin).netloc != request.headers.get("host"):
+                return JSONResponse({"detail": "Cross-origin writes are not allowed."}, status_code=403)
+            if request.headers.get("sec-fetch-site") == "cross-site":
+                return JSONResponse({"detail": "Cross-site writes are not allowed."}, status_code=403)
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        if request.url.path.startswith("/api"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @app.get("/api/health")
+    def health():
+        return {"status": "ok", "version": "1.1.0", "mode": "trusted-local",
+                "titles": len(store.library.titles), "caption_provider": provider.name}
+>>>>>>> origin/master
 
     def _title(tid: str) -> Title:
         t = store.get(tid)
@@ -89,6 +221,7 @@ def create_app(root: str = ROOT) -> FastAPI:
         data["overrides"] = store.overrides.get(title_key(t.name), {})
         return data
 
+<<<<<<< HEAD
     def _caption_payload(t: Title, req: CaptionRequest):
         opts = CaptionOptions.from_dict(req.model_dump(), store.config)
         # Hand-edited copy lives in data/overrides.json; feed it in unless the
@@ -100,6 +233,19 @@ def create_app(root: str = ROOT) -> FastAPI:
         if stored.get("bullets") and not opts.overrides.get("bullets"):
             opts.overrides["bullets"] = stored["bullets"]
         caption = build_caption(t, store.config, opts)
+=======
+    def _build(t: Title, req: CaptionRequest, config=None, overrides=None):
+        config = config or store.config
+        opts = CaptionOptions.from_dict(req.model_dump(), config)
+        stored = (store.overrides if overrides is None else overrides).get(title_key(t.name), {})
+        for key in ("why", "cta", "tagline", "synopsis", "bullets"):
+            if key in stored and key not in opts.overrides:
+                opts.overrides[key] = stored[key]
+        return provider.generate(t, config, opts), opts
+
+    def _caption_payload(t: Title, req: CaptionRequest):
+        caption, opts = _build(t, req)
+>>>>>>> origin/master
         return {
             "text": caption.text,
             "hashtags": caption.hashtags,
@@ -127,6 +273,7 @@ def create_app(root: str = ROOT) -> FastAPI:
         return store.stats()
 
     @app.get("/api/titles")
+<<<<<<< HEAD
     def titles(q: str = "", kind: str = "", genre: str = "", resolution: str = "",
                limit: int = Query(60, le=500), offset: int = 0, sort: str = "name"):
         results, total = store.library.search(q, kind, genre, resolution, limit, offset)
@@ -138,6 +285,33 @@ def create_app(root: str = ROOT) -> FastAPI:
             results = sorted(results, key=lambda t: -(t.year or 0))
         return {"total": total, "count": len(results),
                 "items": [t.to_dict() for t in results]}
+=======
+    def titles(q: str = Query("", max_length=300), kind: str = "", genre: str = "",
+               resolution: str = "", limit: int = Query(60, ge=1, le=500),
+               offset: int = Query(0, ge=0),
+               sort: Literal["name", "year", "size", "newest"] = "name",
+               year_min: Optional[int] = Query(None, ge=1800, le=2100),
+               year_max: Optional[int] = Query(None, ge=1800, le=2100),
+               language: str = "", enriched: Optional[bool] = None):
+        if year_min and year_max and year_min > year_max:
+            raise HTTPException(422, "Minimum year must not exceed maximum year.")
+        results, total = store.library.search(q, kind, genre, resolution, limit, offset,
+                                              sort, year_min, year_max, language, enriched)
+        # File paths and full episode lists are detail-only: small lazy-loaded list payloads.
+        items = []
+        for title in results:
+            item = title.to_dict()
+            for field in ("files", "folders"):
+                item.pop(field, None)
+            items.append(item)
+        return {"total": total, "count": len(items), "items": items,
+                "next_offset": offset + len(items) if offset + len(items) < total else None}
+
+    @app.get("/api/facets")
+    def facets():
+        return {"languages": sorted({v for t in store.library.titles for v in t.audio_languages}),
+                "resolutions": sorted({v for t in store.library.titles for v in t.resolutions})}
+>>>>>>> origin/master
 
     @app.get("/api/titles/{tid}")
     def get_title(tid: str):
@@ -153,8 +327,15 @@ def create_app(root: str = ROOT) -> FastAPI:
         return _caption_payload(_title(tid), req)
 
     @app.get("/api/caption/{tid}")
+<<<<<<< HEAD
     def caption_get(tid: str, variant: int = 0, style: str = "", length: str = "",
                     expect_count: int = 4):
+=======
+    def caption_get(tid: str, variant: int = Query(0, ge=0, le=10000),
+                    style: Literal["", "classic", "extended"] = "",
+                    length: Literal["", "full", "short", "teaser"] = "",
+                    expect_count: int = Query(4, ge=1, le=12)):
+>>>>>>> origin/master
         req = CaptionRequest(variant=variant, style=style or None, length=length or None,
                              expect_count=expect_count)
         return _caption_payload(_title(tid), req)
@@ -162,17 +343,29 @@ def create_app(root: str = ROOT) -> FastAPI:
     @app.post("/api/caption/{tid}/save")
     def save_caption(tid: str, req: CaptionRequest):
         t = _title(tid)
+<<<<<<< HEAD
         cap = build_caption(t, store.config, CaptionOptions.from_dict(req.model_dump(),
                                                                      store.config))
         out_dir = os.path.join(store.root, "out")
         os.makedirs(out_dir, exist_ok=True)
         path = os.path.join(out_dir, safe_filename(t.name, "txt"))
+=======
+        cap, _ = _build(t, req)
+        out_dir = os.path.join(store.root, "out")
+        os.makedirs(out_dir, exist_ok=True)
+        path = os.path.join(out_dir, t.id + "_" + safe_filename(t.name, "txt"))
+>>>>>>> origin/master
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(cap.text)
         return {"path": path}
 
     @app.post("/api/batch")
+<<<<<<< HEAD
     def batch(payload: dict):
+=======
+    def batch(request: ExportRequest):
+        payload = request.model_dump()
+>>>>>>> origin/master
         ids = payload.get("ids") or []
         if not ids:
             q = payload.get("q", "")
@@ -185,8 +378,12 @@ def create_app(root: str = ROOT) -> FastAPI:
         req = CaptionRequest(**(payload.get("options") or {}))
         pairs = []
         for t in titles:
+<<<<<<< HEAD
             cap = build_caption(t, store.config,
                                 CaptionOptions.from_dict(req.model_dump(), store.config))
+=======
+            cap, _ = _build(t, req)
+>>>>>>> origin/master
             pairs.append((t, cap))
             write_caption(cap, os.path.join(store.root, "out"), ["txt"], t, store.config.brand)
         out_dir = os.path.join(store.root, "out")
@@ -202,14 +399,23 @@ def create_app(root: str = ROOT) -> FastAPI:
         }
 
     @app.get("/api/batch/download")
+<<<<<<< HEAD
     def batch_download(q: str = "", kind: str = "", limit: int = 500):
+=======
+    def batch_download(q: str = "", kind: str = "", limit: int = Query(500, ge=1, le=5000)):
+>>>>>>> origin/master
         results, _ = store.library.search(q, kind, "", "", limit, 0)
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
             manifest = []
             for t in results:
+<<<<<<< HEAD
                 cap = build_caption(t, store.config, CaptionOptions.from_dict({}, store.config))
                 zf.writestr(safe_filename(t.name, "txt"), cap.text)
+=======
+                cap, _ = _build(t, CaptionRequest())
+                zf.writestr(t.id + "_" + safe_filename(t.name, "txt"), cap.text)
+>>>>>>> origin/master
                 manifest.append({"title": t.name, "chars": cap.char_count,
                                  "warnings": cap.warnings})
             zf.writestr("_manifest.json", json.dumps(manifest, indent=2, ensure_ascii=False))
@@ -217,6 +423,75 @@ def create_app(root: str = ROOT) -> FastAPI:
         return Response(buf.getvalue(), media_type="application/zip",
                         headers={"Content-Disposition": 'attachment; filename="captions.zip"'})
 
+<<<<<<< HEAD
+=======
+    # -- persistent background exports ----------------------------------------
+    @app.post("/api/jobs", status_code=202)
+    def create_job(req: ExportRequest):
+        with store._lock:
+            if req.ids:
+                chosen = list(dict.fromkeys(req.ids))
+                titles = [_title(ident) for ident in chosen]
+            else:
+                titles, _ = store.library.search(req.q, req.kind, req.genre, req.resolution,
+                                                req.limit, 0)
+            if not titles:
+                raise HTTPException(400, "No matching titles.")
+            titles = copy.deepcopy(titles)
+            config, overrides = copy.deepcopy(store.config), copy.deepcopy(store.overrides)
+        try:
+            return jobs.submit(titles, lambda t: _build(t, req.options, config, overrides)[0],
+                               list(dict.fromkeys(req.formats)))
+        except ValueError as exc:
+            raise HTTPException(429, str(exc)) from exc
+
+    @app.get("/api/jobs")
+    def list_jobs():
+        return jobs.list()
+
+    @app.get("/api/jobs/{ident}")
+    def get_job(ident: str):
+        job = jobs.get(ident)
+        if not job:
+            raise HTTPException(404, "Job not found")
+        return job
+
+    @app.post("/api/jobs/{ident}/cancel")
+    def cancel_job(ident: str):
+        get_job(ident)
+        return jobs.cancel(ident)
+
+    @app.get("/api/jobs/{ident}/download")
+    def download_job(ident: str):
+        if get_job(ident)["status"] != "completed":
+            raise HTTPException(409, "Export is not complete")
+        return FileResponse(jobs.root / ident / "captions.zip", media_type="application/zip",
+                            filename="captions-" + ident[:8] + ".zip")
+
+    # -- backup management -----------------------------------------------------
+    @app.get("/api/backups")
+    def list_backups():
+        return backups.list()
+
+    @app.post("/api/backups", status_code=201)
+    def create_backup():
+        return backups.create()
+
+    @app.get("/api/backups/{ident}/download")
+    def download_backup(ident: str):
+        try:
+            return FileResponse(backups.path(ident), filename="caption-studio-" + ident + ".zip")
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.post("/api/backups/{ident}/restore")
+    def restore_backup(ident: str, req: RestoreRequest):
+        try:
+            return backups.restore(ident)
+        except (ValueError, KeyError, zipfile.BadZipFile) as exc:
+            raise HTTPException(400, "Invalid backup; restore was not completed.") from exc
+
+>>>>>>> origin/master
     # -- overrides ---------------------------------------------------------
     @app.post("/api/titles/{tid}/override")
     def set_override(tid: str, req: OverrideRequest):
@@ -316,7 +591,12 @@ def create_app(root: str = ROOT) -> FastAPI:
             patch["icons"] = {**store.config.icons, **patch["icons"]}
         if "sections" in patch:
             patch["sections"] = {**store.config.sections, **patch["sections"]}
+<<<<<<< HEAD
         store.config.update(patch)
+=======
+        with store._lock:
+            store.config.update(patch)
+>>>>>>> origin/master
         return get_settings()
 
     # -- trailers --------------------------------------------------------------
@@ -363,16 +643,46 @@ def create_app(root: str = ROOT) -> FastAPI:
     async def upload_catalog(file: Annotated[UploadFile, File()]):
         """Import a scanner CSV: save it into data/ and reload the library."""
         name = _safe_catalog_name(file.filename or "")
+<<<<<<< HEAD
         content = await file.read()
+=======
+        content = bytearray()
+        while chunk := await file.read(1024 * 1024):
+            content.extend(chunk)
+            if len(content) > MAX_CATALOG_UPLOAD_BYTES:
+                raise HTTPException(413, "File too large (200 MB limit).")
+>>>>>>> origin/master
         if not content:
             raise HTTPException(400, "The uploaded file is empty.")
         if len(content) > MAX_CATALOG_UPLOAD_BYTES:
             raise HTTPException(413, "File too large (200 MB limit).")
+<<<<<<< HEAD
         dest = os.path.join(store.root, "data", name)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         with open(dest, "wb") as fh:
             fh.write(content)
         store.reload()
+=======
+        try:
+            # Reject malformed encoding before replacing an existing catalog.
+            next(csv.reader(io.StringIO(content.decode("utf-8-sig"))))
+        except (UnicodeError, csv.Error, StopIteration) as exc:
+            raise HTTPException(400, "Use a UTF-8 CSV with a header row.") from exc
+        backups.create("before-import")
+        dest = os.path.join(store.root, "data", name)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        import tempfile
+        with store._lock:
+            fd, temporary = tempfile.mkstemp(dir=os.path.dirname(dest), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "wb") as fh:
+                    fh.write(content)
+                os.replace(temporary, dest)
+                store.reload()
+            finally:
+                if os.path.exists(temporary):
+                    os.unlink(temporary)
+>>>>>>> origin/master
         # The loader skips CSVs that don't match the scanner format — surface
         # that to the caller instead of failing silently.
         return {
@@ -383,7 +693,10 @@ def create_app(root: str = ROOT) -> FastAPI:
             "sources": store.library.sources,
         }
 
+<<<<<<< HEAD
     @app.get("/api/reload")
+=======
+>>>>>>> origin/master
     def reload_catalogs():
         store.reload()
         return {"ok": True, "stats": store.stats(),
@@ -400,4 +713,9 @@ def create_app(root: str = ROOT) -> FastAPI:
 
 if __name__ == "__main__":
     import uvicorn
+<<<<<<< HEAD
     uvicorn.run(create_app(), host="0.0.0.0", port=8000, log_level="info")
+=======
+    uvicorn.run(create_app(), host="127.0.0.1", port=8000, log_level="info")
+
+>>>>>>> origin/master

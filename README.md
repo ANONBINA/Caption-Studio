@@ -1,5 +1,14 @@
 # Caption Studio
 
+<<<<<<< HEAD
+=======
+## Version 1.1 — local-workspace upgrade
+
+See [START_HERE.md](START_HERE.md) for setup, verification, recovery, security limits,
+and the implementation status of the broader roadmap.
+
+
+>>>>>>> origin/master
 Turns your media-catalog CSVs into scroll-stopping promo captions in the exact
 house style of your reference post — same emojis, same section order, same
 call-to-action.
@@ -38,6 +47,7 @@ This is the sitcom that redefined family comedy with its chaotic energy…
 
 ## Quick start
 
+<<<<<<< HEAD
 ```bash
 pip install -e ".[web]"          # editable install, incl. web dependencies
 
@@ -47,6 +57,39 @@ caption-studio serve
 # ...or straight from the command line
 caption-studio caption "Malcolm In The Middle"
 
+=======
+**One-command setup** (creates the venv, installs everything, copies config —
+safe to re-run; it only does the steps that are still missing):
+
+```bash
+bash scripts/setup.sh        # macOS / Linux / Git Bash on Windows
+scripts\setup.bat            # Windows CMD
+```
+
+Optional flags, combinable:
+
+```bash
+--dev      # also install pytest + ruff (test/lint tooling)
+--qrcode   # also install qrcode — scannable QR when you run mobile mode
+```
+
+Then run it:
+
+```bash
+bash scripts/serve.sh        # web app — http://localhost:8000 (desktop, loopback only)
+scripts\serve.bat            # Windows CMD
+bash scripts/serve.sh --lan  # mobile mode — prints a QR + URL for your phone
+scripts\serve.bat --lan      # Windows CMD, mobile mode
+bash scripts/test.sh         # pytest + ruff
+
+# ...or straight from the command line (any shell, after setup)
+caption-studio serve
+caption-studio caption "Malcolm In The Middle"
+
+# Manual route, if you'd rather do it yourself:
+#   python -m venv .venv && .venv/Scripts/activate (Windows) or source .venv/bin/activate
+#   pip install -e ".[web]"
+>>>>>>> origin/master
 # (CLI-only install, no web app: pip install -e .)
 # (still works too: python -m caption_studio.cli ...)
 ```
@@ -56,6 +99,70 @@ caption, copy it. No setup, no API key required.
 
 ---
 
+<<<<<<< HEAD
+=======
+## Desktop and mobile
+
+The web UI is responsive — it works on desktop and phone browsers alike. The
+`--lan` flag on the serve scripts is what makes a phone able to **reach** the
+app at all:
+
+| | |
+|---|---|
+| **Desktop mode** (default) | binds to `127.0.0.1` only — nothing outside this PC can connect |
+| **Mobile mode** (`--lan`)  | binds to all interfaces and prepares everything a phone needs |
+
+Running `serve.sh --lan` (or `serve.bat --lan`) automatically:
+
+1. **Detects this PC's LAN IP** (e.g. `192.168.1.188`) — no need to run `ipconfig`.
+2. **Whitelists that IP** via `CAPTION_STUDIO_ALLOWED_HOSTS`, so the app's host
+   validation accepts requests from the phone.
+3. **Prints the URL** (`http://192.168.1.188:8000`) and, if `--qrcode` was
+   installed during setup, a **scannable QR code** — point your phone camera at
+   it and tap the link.
+4. **Reminds you about the Windows Firewall prompt** — click **Allow** so the
+   phone can connect.
+
+Requirements for the phone: same Wi-Fi network as the PC (guest networks and
+hotspots usually block device-to-device traffic), and a modern browser — the UI
+is the same responsive web app, with the mobile layout from v1.1.
+
+> **Security reminder:** there is no login. In mobile mode every device on the
+> network can read and change the library. Use it on a trusted Wi-Fi only, and
+> never port-forward it to the internet.
+
+### Troubleshooting mobile mode
+
+| Symptom | Fix |
+|---|---|
+| "Could not auto-detect your LAN IP" | Find the IPv4 with `ipconfig` and export it: `export CAPTION_STUDIO_ALLOWED_HOSTS=192.168.1.50` (bash) or `set CAPTION_STUDIO_ALLOWED_HOSTS=192.168.1.50` (CMD), then serve with an explicit host: `scripts\serve.bat 192.168.1.50` |
+| Phone gets a connection error / times out | Click **Allow** on the Windows Firewall prompt, or allow port 8000 in firewall settings; check both devices are on the same network |
+| QR shows but the URL does not load | The QR is cosmetic — type the printed URL manually; check the server is still running |
+| "Invalid host header" in the response | Your PC's IP changed (new Wi-Fi) — re-run `--lan`, which re-detects and re-whitelists |
+| LAN IP changes often | Set `CAPTION_STUDIO_ALLOWED_HOSTS` permanently in your environment, or reserve the PC's IP in your router's DHCP settings |
+
+---
+
+## Scripts reference
+
+Everything in `scripts/` is idempotent — safe to re-run at any time; each
+script only performs the steps that are still missing. `.sh` variants run on
+macOS/Linux/Git Bash; `.bat` variants run on Windows CMD.
+
+| Script | Purpose |
+|---|---|
+| `setup.sh` / `setup.bat` | Full setup: check Python 3.10+ (prefers the real `py` launcher over Windows' Store stub), create `.venv`, install `.[web]`, copy `config.example.json` → `config.json` (never overwrites an existing one), check for a catalog in `data/`, verify the install. Flags: `--dev` (pytest/ruff), `--qrcode` (QR support) |
+| `serve.sh` / `serve.bat` | Launch the web app. Auto-runs setup if `.venv` is missing. Desktop mode binds to `127.0.0.1:8000`; `--lan` (or an explicit host) enables mobile mode with QR + firewall hints |
+| `test.sh` / `test.bat` | Run pytest + ruff inside the project venv (auto-installs dev deps if missing). `test.sh quick` = pytest only |
+| `lan_ip.py` | Helper: prints this PC's LAN IPv4 (used by the serve scripts) |
+| `print_qr.py` | Helper: prints an ASCII QR for a URL; failure is cosmetic and never stops the server |
+
+Custom port: pass it as the second argument — `bash scripts/serve.sh --lan 9000`
+gives you the phone URL on port 9000.
+
+---
+
+>>>>>>> origin/master
 ## What it does with your catalog
 
 Your scanner writes **one row per video file**. Caption Studio folds that into
@@ -227,6 +334,19 @@ safeguards keep dead YouTube links out of your captions:
 ## Development
 
 ```bash
+<<<<<<< HEAD
+=======
+bash scripts/setup.sh --dev       # one-time: app + dev tools (pytest, ruff)
+
+bash scripts/test.sh              # pytest + ruff — same as CI
+bash scripts/test.sh quick        # pytest only, faster loop (scripts\test.bat quick on CMD)
+bash scripts/serve.sh             # try your changes in the web app
+```
+
+Equivalent manual commands:
+
+```bash
+>>>>>>> origin/master
 pip install -e ".[web,dev]"       # app + dev tools (pytest, ruff)
 
 pytest                            # run the test suite
@@ -254,8 +374,14 @@ caption_studio/
   export.py      .txt / .md / .html / .csv / .zip output
   cli.py         command-line interface
   app.py         FastAPI web app
+<<<<<<< HEAD
 web/index.html   single-file UI (no CDNs, works offline)
 tests/           pytest suite: config, catalog folding, captions, store
+=======
+  web/index.html packaged single-file UI (no CDNs, works offline)
+tests/           pytest suite: config, catalog folding, captions, store
+scripts/         setup / serve / test helpers (bash + Windows .bat, + lan_ip.py and print_qr.py helpers)
+>>>>>>> origin/master
 config.example.json   template config for fresh clones
 data/            catalogs + enriched.json + overrides.json (git-ignored)
 out/            generated captions (git-ignored)
@@ -264,8 +390,22 @@ out/            generated captions (git-ignored)
 
 ## Requirements
 
+<<<<<<< HEAD
 Python 3.9+. `pip install -e ".[web]"` pulls in `fastapi`, `uvicorn` and
+=======
+Python 3.10+. `pip install -e ".[web]"` pulls in `fastapi`, `uvicorn` and
+>>>>>>> origin/master
 `python-multipart` for the web app (`requirements.txt` still works for a
 plain `pip install -r`). The CLI's `caption`, `batch`, `search` and `stats`
 commands run on the standard library alone — install FastAPI only if you want
 the web app.
+<<<<<<< HEAD
+=======
+
+Optional extras: `qrcode` (installed by `setup.sh --qrcode` / `setup.bat
+--qrcode`) enables the scannable QR code in mobile mode; `pytest` + `ruff`
+(`--dev`) are only needed for development. On Windows, real Python from
+python.org is recommended — the Microsoft Store `python` alias is a stub the
+setup scripts detect and work around via the `py` launcher.
+
+>>>>>>> origin/master

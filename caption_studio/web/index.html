@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Caption Studio</title>
+<style>
+:root{
+  --bg:#0e1014; --panel:#151922; --panel2:#1b2029; --line:#283041;
+  --txt:#e9ecf1; --dim:#98a1b3; --accent:#6c8cff; --good:#3ecf8e;
+  --warn:#f0b429; --bad:#ff6b6b; --chip:#232a38;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--txt);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+
+/* ---------- layout ---------- */
+#app{display:flex;height:100vh;overflow:hidden}
+aside{
+  width:330px;min-width:260px;border-right:1px solid var(--line);
+  background:var(--panel);display:flex;flex-direction:column
+}
+main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  display:flex;align-items:center;gap:10px;padding:12px 16px;
+  border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap
+}
+.brand{font-weight:700;font-size:16px;letter-spacing:.2px}
+.brand span{color:var(--accent)}
+.pill{
+  font-size:11px;padding:3px 9px;border-radius:999px;background:var(--chip);
+  color:var(--dim);border:1px solid var(--line);white-space:nowrap
+}
+.spacer{flex:1}
+.btn{
+  background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+  padding:7px 13px;border-radius:8px;font-size:13px;transition:.12s
+}
+.btn:hover{border-color:var(--accent);color:#fff}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#0b0d12;font-weight:600}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---------- sidebar ---------- */
+.side-head{padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+.side-head input[type=search]{
+  width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--line);
+  background:var(--bg);outline:none
+}
+.side-head input[type=search]:focus{border-color:var(--accent)}
+.filters{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.filters select{
+  flex:1;min-width:88px;background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:6px 8px;font-size:12px
+}
+#list{flex:1;overflow:auto;padding:6px}
+.item{
+  padding:9px 11px;border-radius:9px;cursor:pointer;border:1px solid transparent;
+  margin-bottom:3px
+}
+.item:hover{background:var(--panel2)}
+.item.on{background:#1d2740;border-color:var(--accent)}
+.item .t{font-weight:600;font-size:13.5px;display:flex;gap:6px;align-items:center}
+.item .s{font-size:11.5px;color:var(--dim);margin-top:2px}
+.kind{font-size:9.5px;padding:1px 5px;border-radius:4px;background:var(--chip);
+  color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.kind.series{background:#243a5e;color:#9dc0ff}
+.kind.movie{background:#3d2b16;color:#ffc98a}
+.empty{padding:26px 16px;color:var(--dim);text-align:center;font-size:13px}
+
+/* ---------- main ---------- */
+.content{flex:1;overflow:auto;padding:18px 22px 60px}
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:20px}
+@media (max-width:1080px){.grid{grid-template-columns:1fr}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+h2.sec{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);
+  margin:0 0 10px;font-weight:700}
+
+.meta-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.genre-chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;
+  padding:2px 10px;font-size:11.5px}
+.title-h{font-size:20px;font-weight:700;margin:0 0 6px}
+.sub{color:var(--dim);font-size:12.5px;margin:0 0 14px}
+
+.caption-box{
+  white-space:pre-wrap;word-wrap:break-word;background:var(--bg);
+  border:1px solid var(--line);border-radius:10px;padding:16px;font-size:15px;
+  line-height:1.65;min-height:300px
+}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.counter{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.lim{font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);
+  background:var(--chip);color:var(--dim)}
+.lim.ok{color:var(--good);border-color:#1e4d3a}
+.lim.no{color:var(--bad);border-color:#5a2626}
+
+.warns{margin-top:12px;border:1px solid #5a4a1e;background:#251d0d;border-radius:10px;padding:10px 12px}
+.warns ul{margin:5px 0 0;padding-left:18px;color:#f3d79a;font-size:12.5px}
+.warns b{color:var(--warn);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+
+label.f{display:block;margin-bottom:11px}
+label.f > span{display:block;font-size:11.5px;color:var(--dim);margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.5px}
+label.f input,label.f textarea,label.f select{
+  width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:8px 10px;outline:none
+}
+label.f input:focus,label.f textarea:focus{border-color:var(--accent)}
+label.f textarea{resize:vertical;min-height:62px}
+.row{display:flex;gap:10px}
+.row > *{flex:1}
+.toggles{display:flex;flex-wrap:wrap;gap:6px}
+.toggle{
+  font-size:11.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);
+  background:var(--bg);color:var(--dim)
+}
+.toggle.on{background:#1d2740;border-color:var(--accent);color:#cfe0ff}
+.hint{font-size:11.5px;color:var(--dim);margin-top:6px}
+
+/* ---------- modal ---------- */
+.modal{position:fixed;inset:0;background:rgba(5,7,11,.72);display:none;
+  align-items:center;justify-content:center;padding:24px;z-index:50}
+.modal.open{display:flex}
+.modal .box{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  width:min(720px,100%);max-height:88vh;overflow:auto;padding:20px
+}
+.modal h3{margin:0 0 14px;font-size:16px}
+.modal .close{float:right}
+.dupe{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.dupe .nm{flex:1;font-size:13px}
+.toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  background:#1d2740;border:1px solid var(--accent);color:#cfe0ff;padding:9px 16px;
+  border-radius:999px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99
+}
+.toast.show{opacity:1}
+.small{font-size:12px;color:var(--dim)}
+.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.emoji-grid label span{font-size:10.5px}
+/* 1.1 — responsive library and accessible controls */
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.side-brand{padding:18px 16px 0;font-weight:700;letter-spacing:.08em;font-size:12px;color:var(--dim)}
+.side-brand b{color:var(--good)}
+#libraryCount{padding:8px 14px;color:var(--dim);font-size:12px;border-bottom:1px solid var(--line)}
+.filters input{width:100px;min-width:100px;flex:1;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:6px 8px}
+.item{display:block;width:100%;text-align:left;background:none;color:var(--txt);font:inherit}
+#loadMore{margin:8px 14px}
+progress{width:100%;accent-color:var(--good);height:14px}
+.welcome{max-width:650px;margin:8vh auto;padding:28px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(140deg,#1d2740,var(--panel))}
+.welcome h1{font-size:32px;line-height:1.2;margin:14px 0}
+.welcome p{color:var(--dim);font-size:15px}
+.welcome .eyebrow{color:var(--good);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+@media(max-width:700px){
+ #app{height:auto;min-height:100dvh;display:block;overflow:visible}
+ aside{width:100%;min-width:0;height:43dvh;border-right:0;border-bottom:1px solid var(--line)}
+ main{overflow:visible}.content{padding:14px;overflow:visible}.topbar{padding:12px}
+ .side-brand{padding-top:10px}.side-head{padding-top:8px}.row{flex-wrap:wrap}
+ .row>*{min-width:130px}.modal{padding:10px}.modal .box{max-height:92dvh}
+ .welcome{margin:10px auto}.welcome h1{font-size:26px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside aria-label="Media library">
+    <div class="side-brand"><b>●</b> YOUR MEDIA LIBRARY</div>
+    <div class="side-head">
+      <input type="search" id="q" aria-label="Search titles, genres or year" placeholder="Search  — try 'breaking', 'horror'…" autocomplete="off">
+      <div class="filters">
+        <select id="fKind" aria-label="Media type"><option value="">All</option><option value="movie">Movies</option><option value="series">Series</option></select>
+        <select id="fGenre" aria-label="Genre"><option value="">Genre…</option></select>
+        <select id="fRes" aria-label="Resolution"><option value="">Quality…</option><option>720p</option><option>1080p</option><option>480p</option><option>360p</option></select>
+        <select aria-label="Sort titles" id="fSort"><option value="name">A→Z</option><option value="year">Newest</option><option value="size">Largest</option></select>
+        <input id="yearMin" type="number" min="1800" max="2100" placeholder="From year" aria-label="From year">
+        <input id="yearMax" type="number" min="1800" max="2100" placeholder="To year" aria-label="To year">
+        <select id="fLanguage" aria-label="Audio language"><option value="">All languages</option></select>
+        <select id="fEnriched" aria-label="Metadata status"><option value="">All metadata</option><option value="true">TMDb enriched</option><option value="false">Not enriched</option></select>
+      </div>
+    </div>
+    <div id="libraryCount" aria-live="polite">Loading library…</div>
+    <div id="list"></div>
+    <button class="btn sm" id="loadMore" hidden>Load more titles</button>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div class="brand">Caption <span>Studio</span></div>
+      <span class="pill" id="brandPill">—</span>
+      <span class="pill" id="statsPill">loading…</span>
+      <div class="spacer"></div>
+      <button class="btn sm" id="btnImport">Import CSV</button>
+      <button class="btn sm" id="btnReload" title="Re-read every catalog in data/">Reload</button>
+      <button class="btn sm" id="btnTrailers" title="Find dead YouTube trailer links">Trailers</button>
+      <button class="btn sm" id="btnDupes">Duplicates</button>
+      <button class="btn sm" id="btnBatch">Exports</button>
+      <button class="btn sm" id="btnBackups">Backups</button>
+      <button class="btn sm" id="btnSettings">Settings</button>
+      <input type="file" id="csvFile" accept=".csv,text/csv" hidden>
+    </div>
+    <div class="content" id="content">
+      <div class="welcome"><span class="eyebrow">Your library. Your voice.</span>
+      <h1>From media catalog<br>to ready-to-review captions.</h1>
+      <p>Find a film or series in your library, refine its caption, and export in your house style.</p>
+      <p>Start by choosing a title or importing a scanner CSV. Everything stays on this computer unless you request TMDb enrichment.</p>
+      <span class="pill">Local workspace</span> <span class="pill">No AI key required</span></div>
+    </div>
+  </main>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Workspace tools"><div class="box" id="modalBox"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const api = async (path, opts) => {
+  const res = await fetch(path, Object.assign({
+    headers: {'Content-Type':'application/json'}
+  }, opts || {}));
+  if (!res.ok) {
+    let msg = res.statusText;
+    try { msg = (await res.json()).detail || msg; } catch(e){}
+    throw new Error(msg);
+  }
+  return res.json();
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let state = {
+  items: [], selected: null, caption: null, settings: {}, genres: [],
+  options: {variant:0, style:'classic', length:'full', expect_count:4,
+            sections:{}, overrides:{}},
+  q:'', kind:'', genre:'', res:'', sort:'name', nextOffset:null
+};
+
+/* ---------------- toast ---------------- */
+let toastT;
+function toast(msg, ms=2200){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+/* ---------------- sidebar ---------------- */
+async function loadGenres(){
+  try{
+    state.genres = await api('/api/genres');
+    const sel = $('#fGenre');
+    sel.innerHTML = '<option value="">Genre…</option>';  /* reset: reloads re-populate */
+    state.genres.forEach(g=>{
+      const o = document.createElement('option');
+      o.value = g.name; o.textContent = `${g.name} (${g.count})`;
+      sel.appendChild(o);
+    });
+  }catch(e){}
+}
+
+async function loadStats(){
+  try{
+    const s = await api('/api/stats');
+    $('#statsPill').textContent =
+      `${s.titles} titles · ${s.movies} movies · ${s.series} series · ${s.episodes} eps`;
+    state.settings = await api('/api/settings');
+    $('#brandPill').textContent = state.settings.brand;
+  }catch(e){}
+}
+
+let searchT, listController;
+function libraryParams(){
+  const p = new URLSearchParams({q:state.q, kind:state.kind, genre:state.genre,
+    resolution:state.res, sort:state.sort, limit:60});
+  for(const [id,key] of [['yearMin','year_min'],['yearMax','year_max'],['fLanguage','language'],['fEnriched','enriched']]){
+    if($('#'+id).value) p.set(key,$('#'+id).value);
+  }
+  return p;
+}
+async function loadList(append=false){
+  if(listController) listController.abort();
+  listController = new AbortController();
+  const params = libraryParams();
+  params.set('offset', append ? (state.nextOffset || 0) : 0);
+  $('#loadMore').disabled = true;
+  try{
+    const data = await api('/api/titles?' + params, {signal:listController.signal});
+    state.items = append ? state.items.concat(data.items) : data.items;
+    state.nextOffset = data.next_offset;
+    $('#libraryCount').textContent = `${state.items.length} of ${data.total} matching titles`;
+    $('#loadMore').hidden = data.next_offset === null;
+    $('#loadMore').disabled = false;
+    const list = $('#list');
+    list.innerHTML = state.items.length ? state.items.map(t=>{
+      const specs = [];
+      if (t.kind==='series') specs.push(`${t.seasons}s · ${t.episodes}ep`);
+      else if (t.runtime_min) specs.push(`${t.runtime_min}m`);
+      if (t.resolution_label) specs.push(t.resolution_label);
+      specs.push(t.size_label);
+      return `<button class="item${state.selected===t.id?' on':''}" data-id="${esc(t.id)}">
+        <div class="t"><span class="kind ${esc(t.kind)}">${esc(t.kind)}</span>${esc(t.name)}</div>
+        <div class="s">${esc(t.year_label)} · ${esc((t.genres||[]).join(', ') || 'no genre')} · ${esc(specs.join(' · '))}</div>
+      </button>`;
+    }).join('') : '<div class="empty">No matching titles. Adjust the filters or import a CSV.</div>';
+    $$('#list .item').forEach(el=>el.onclick = ()=>select(el.dataset.id).catch(e=>toast(e.message)));
+  }catch(e){
+    if(e.name!=='AbortError') {toast('Search failed: '+e.message); $('#loadMore').disabled=false;}
+  }
+}
+$('#loadMore').onclick = ()=>loadList(true);
+for(const id of ['yearMin','yearMax','fLanguage','fEnriched']) $('#'+id).onchange=()=>loadList();
+async function loadFacets(){
+  try{
+    const f=await api('/api/facets');
+    for(const [id,key,label] of [['fLanguage','languages','All languages'],['fRes','resolutions','All resolutions']]){
+      const element=$('#'+id), current=element.value;
+      element.innerHTML=`<option value="">${label}</option>`+f[key].map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+      element.value=current;
+    }
+  }catch(e){toast(e.message);}
+}
+
+$('#q').addEventListener('input', e=>{
+  state.q = e.target.value;
+  clearTimeout(searchT); searchT = setTimeout(()=>loadList(), 180);
+});
+$('#fKind').onchange = e => { state.kind = e.target.value; loadList(); };
+$('#fGenre').onchange = e => { state.genre = e.target.value; loadList(); };
+$('#fRes').onchange = e => { state.res = e.target.value; loadList(); };
+$('#fSort').onchange = e => { state.sort = e.target.value; loadList(); };
+
+/* ---------------- caption ---------------- */
+async function select(id){
+  state.selected = id;
+  state.options.overrides = {};
+  state.options.variant = 0;
+  $$('#list .item').forEach(el=>el.classList.toggle('on', el.dataset.id===id));
+  await render();
+  if(matchMedia('(max-width:700px)').matches) $('#content').scrollIntoView({behavior:'smooth'});
+}
+
+async function render(){
+  const t = state.items.find(x=>x.id===state.selected) || await api('/api/titles/'+state.selected);
+  let cap;
+  try{
+    cap = await api('/api/caption/'+t.id, {method:'POST', body: JSON.stringify(state.options)});
+  }catch(e){ toast('Error: '+e.message); return; }
+  state.caption = cap;
+  const sec = state.settings.sections || {};
+
+  const toggles = [
+    ['genres','Genres'],['synopsis','Synopsis'],['expect','Expect'],['specs','Specs'],
+    ['language','Language'],['cast','Cast'],['rating','Rating'],['why','Why'],
+    ['trailer','Trailer'],['tagline','Tagline'],['cta','CTA'],['signature','Sign-off'],
+    ['storage','Size/quality'],['hashtags','Hashtags']
+  ];
+  const active = Object.assign({}, sec, state.options.sections||{});
+
+  $('#content').innerHTML = `
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h1 class="title-h">${esc(t.name)} ${t.year && t.year!=='—' ? `<span class="small">(${t.year_label})</span>`:''}</h1>
+        <p class="sub">${t.kind_label} · ${t.size_label} · ${esc(t.resolution_label||'—')}
+          ${t.is_series?` · ${t.seasons} season(s) · ${t.episodes} episodes`:''}
+          ${t.runtime_min?` · ~${t.runtime_min} min each`:''}
+          ${t.enriched?' · <span style="color:var(--good)">TMDB enriched</span>':''}</p>
+        <div class="meta-row">
+          ${(t.genres||[]).map(g=>`<span class="genre-chip">${esc(g)}</span>`).join('') || '<span class="genre-chip">no genre</span>'}
+        </div>
+        <div class="caption-box" id="capText">${esc(cap.text)}</div>
+        <div class="tools">
+          <button class="btn primary" id="btnCopy">Copy caption</button>
+          <button class="btn" id="btnVariant">New wording</button>
+          <button class="btn" id="btnSave">Save .txt</button>
+          <button class="btn" id="btnEnrich">Fetch from TMDB</button>
+          <button class="btn" id="btnDl">Download</button>
+        </div>
+        <div class="counter">
+          <span class="lim">${cap.char_count} chars</span>
+          ${cap.limits.map(l=>`<span class="lim ${l.fits?'ok':'no'}">${l.platform} ${l.fits?'✓':'✗ (over by '+(l.chars-l.limit)+')'}</span>`).join('')}
+        </div>
+        ${cap.warnings.length?`<div class="warns"><b>Needs a human touch</b>
+          <ul>${cap.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2 class="sec">Captions settings</h2>
+        <div class="row">
+          <label class="f"><span>Layout</span>
+            <select id="optStyle">
+              <option value="classic"${state.options.style==='classic'?' selected':''}>Classic (as the reference post)</option>
+              <option value="extended"${state.options.style==='extended'?' selected':''}>Extended (adds size/quality)</option>
+            </select></label>
+          <label class="f"><span>Length</span>
+            <select id="optLength">
+              <option value="full"${state.options.length==='full'?' selected':''}>Full post</option>
+              <option value="short"${state.options.length==='short'?' selected':''}>Short</option>
+              <option value="teaser"${state.options.length==='teaser'?' selected':''}>Teaser</option>
+            </select></label>
+        </div>
+        <div class="row">
+          <label class="f"><span>Expect bullets</span>
+            <input type="number" min="2" max="6" id="optBullets" value="${state.options.expect_count}"></label>
+          <label class="f"><span>Wording variant</span>
+            <input type="number" min="0" max="99" id="optVariant" value="${state.options.variant}"></label>
+        </div>
+        <h2 class="sec" style="margin-top:14px">Sections</h2>
+        <div class="toggles">
+          ${toggles.map(([k,label])=>`<button class="toggle ${active[k]?'on':''}" data-sec="${k}">${label}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2 class="sec">Edit this caption</h2>
+        <label class="f"><span>Synopsis / hook</span>
+          <textarea id="edSynopsis" placeholder="Leave empty to auto-write from the genre">${esc(t.overview||'')}</textarea></label>
+        <label class="f"><span>Expect bullets (one per line)</span>
+          <textarea id="edBullets" placeholder="One bullet per line — leave empty to auto-generate">${esc(((cap.title_overrides||{}).bullets||[]).join('\n'))}</textarea></label>
+        <label class="f"><span>Tagline</span>
+          <input id="edTagline" value="${esc(t.tagline||'')}" placeholder="Short, punchy, 3-5 words"></label>
+        <label class="f"><span>Why we recommend it</span>
+          <textarea id="edWhy" placeholder="Leave empty to auto-write">${esc((cap.title_overrides||{}).why||'')}</textarea></label>
+        <div class="row">
+          <label class="f"><span>Cast — separate with |</span>
+            <input id="edCast" value="${esc((t.cast||[]).join(' | '))}" placeholder="Jane Kaczmarek | Bryan Cranston"></label>
+          <label class="f"><span>Genres — separate with |</span>
+            <input id="edGenres" value="${esc((t.genres||[]).join(' | '))}" placeholder="Comedy | Sitcom | Family"></label>
+        </div>
+        <div class="row">
+          <label class="f"><span>Age rating</span>
+            <input id="edRating" value="${esc(t.rating||'')}" placeholder="TV-PG, R, 18+"></label>
+          <label class="f"><span>DM keyword</span>
+            <input id="edKeyword" value="${esc(t.dm_keyword||'')}" placeholder="AUTO"></label>
+        </div>
+        <label class="f"><span>Trailer link</span>
+          <input id="edTrailer" value="${esc(t.trailer_url||'')}" placeholder="https://youtu.be/..."></label>
+        <div class="tools">
+          <button class="btn primary" id="btnApply">Apply & regenerate</button>
+          <button class="btn" id="btnReset">Clear my edits</button>
+        </div>
+        <p class="hint">Edits are saved per title in <code>data/overrides.json</code>, so they survive a re-scan.</p>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2 class="sec">On your drive</h2>
+        <p class="small">${(t.folders||[]).slice(0,4).map(f=>esc(f)).join('<br>') || '—'}</p>
+      </div>
+    </div>
+  </div>`;
+
+  /* wire up */
+  $('#btnCopy').onclick = async () => {
+    try{ await navigator.clipboard.writeText(cap.text); toast('Copied to clipboard'); }
+    catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = cap.text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove(); toast('Copied');
+    }
+  };
+  $('#btnDl').onclick = () => {
+    const blob = new Blob([cap.text], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (t.name||'caption').replace(/[^a-z0-9]+/gi,'_').toLowerCase()+'.txt';
+    a.click();
+  };
+  $('#btnVariant').onclick = () => { state.options.variant++; render(); };
+  $('#btnSave').onclick = async () => {
+    try{ const r = await api('/api/caption/'+t.id+'/save', {method:'POST', body: JSON.stringify(state.options)});
+      toast('Saved to out/'); }catch(e){ toast(e.message); }
+  };
+  $('#btnEnrich').onclick = () => enrich(t);
+
+  $('#optStyle').onchange = e => { state.options.style = e.target.value; render(); };
+  $('#optLength').onchange = e => { state.options.length = e.target.value; render(); };
+  $('#optBullets').onchange = e => { state.options.expect_count = +e.target.value; render(); };
+  $('#optVariant').onchange = e => { state.options.variant = +e.target.value; render(); };
+  $$('.toggle').forEach(b=>b.onclick = () => {
+    const k = b.dataset.sec;
+    state.options.sections[k] = !b.classList.contains('on');
+    b.classList.toggle('on', state.options.sections[k]);
+    regenerate();
+  });
+
+  $('#btnApply').onclick = async () => {
+    const bullets = $('#edBullets').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const payload = {
+      synopsis: $('#edSynopsis').value.trim(),
+      tagline: $('#edTagline').value.trim(),
+      why: $('#edWhy').value.trim() || null,
+      cast: $('#edCast').value.trim(),
+      genres: $('#edGenres').value.trim(),
+      rating: $('#edRating').value.trim(),
+      dm_keyword: $('#edKeyword').value.trim().toUpperCase(),
+      bullets: bullets.length ? bullets : null
+    };
+    try{
+      await api('/api/titles/'+t.id+'/override', {method:'POST', body: JSON.stringify(payload)});
+      state.options.overrides = payload;
+      toast('Saved');
+      await render();
+    }catch(e){ toast(e.message); }
+  };
+  $('#btnReset').onclick = async () => {
+    await api('/api/titles/'+t.id+'/override', {method:'DELETE'});
+    state.options.overrides = {};
+    toast('Cleared'); await render();
+  };
+}
+
+async function regenerate(){
+  if (!state.selected) return;
+  try{
+    const cap = await api('/api/caption/'+state.selected,
+      {method:'POST', body: JSON.stringify(state.options)});
+    state.caption = cap;
+    $('#capText').textContent = cap.text;
+  }catch(e){ toast(e.message); }
+}
+
+/* ---------------- TMDB ---------------- */
+async function enrich(t){
+  if (!state.settings.tmdb_configured){
+    openSettings('No TMDB key yet — paste one below and hit Save.'); return;
+  }
+  toast('Fetching from TMDB…');
+  try{
+    const r = await api('/api/titles/'+t.id+'/enrich', {method:'POST', body:'{}'});
+    toast('Filled: ' + (r.result.changed.join(', ')||'nothing new'));
+    await loadList(); await render();
+  }catch(e){
+    toast('TMDB: '+e.message);
+    if (e.message.includes('No TMDB match')){
+      openSettings('No TMDB match for “'+t.name+'”. Try another key, or type the details in by hand.');
+    }
+  }
+}
+
+/* ---------------- modals ---------------- */
+let modalPreviousFocus;
+function openModal(html){ modalPreviousFocus=document.activeElement; $('#modalBox').innerHTML = html; $('#modal').classList.add('open'); $('#modalBox button, #modalBox input')?.focus(); }
+function closeModal(){ $('#modal').classList.remove('open'); modalPreviousFocus?.focus(); }
+document.addEventListener('keydown', e=>{
+  if(!$('#modal').classList.contains('open')) return;
+  if(e.key==='Escape') closeModal();
+  if(e.key==='Tab'){
+    const focusable=$$('#modalBox button:not(:disabled), #modalBox input, #modalBox select, #modalBox a[href], #modalBox textarea');
+    const first=focusable[0], last=focusable.at(-1);
+    if(e.shiftKey && document.activeElement===first){e.preventDefault(); last?.focus();}
+    else if(!e.shiftKey && document.activeElement===last){e.preventDefault(); first?.focus();}
+  }
+});
+$('#modal').onclick = e => { if (e.target.id==='modal') closeModal(); };
+
+function openSettings(note){
+  const s = state.settings;
+  const icons = s.icons || {};
+  const iconFields = [
+    ['title_movie','Title (movie)'],['title_series','Title (series)'],['synopsis','Synopsis'],
+    ['expect','Expect:'],['bullet','Bullet'],['specs','Specs'],['language','Language'],
+    ['cast','Cast'],['rating','Rating'],['why','Why recommended'],['trailer','Trailer'],
+    ['tagline','Tagline'],['storage','Size/quality'],['cta','Call to action']
+  ];
+  openModal(`
+    <button class="btn sm close" onclick="closeModal()">Close</button>
+    <h3>Settings</h3>
+    ${note?`<p class="warns" style="margin-top:0">${esc(note)}</p>`:''}
+    <div class="row">
+      <label class="f"><span>Brand name</span><input id="setBrand" value="${esc(s.brand)}"></label>
+      <label class="f"><span>CTA tail</span><input id="setTail" value="${esc(s.cta_tail)}"></label>
+    </div>
+    <label class="f"><span>Call-to-action template</span>
+      <input id="setCta" value="${esc(s.cta_template)}"></label>
+    <div class="row">
+      <label class="f"><span>Default layout</span>
+        <select id="setStyle"><option value="classic"${s.default_style==='classic'?' selected':''}>Classic</option>
+        <option value="extended"${s.default_style==='extended'?' selected':''}>Extended</option></select></label>
+      <label class="f"><span>Default length</span>
+        <select id="setLength"><option value="full"${s.default_length==='full'?' selected':''}>Full</option>
+        <option value="short"${s.default_length==='short'?' selected':''}>Short</option>
+        <option value="teaser"${s.default_length==='teaser'?' selected':''}>Teaser</option></select></label>
+    </div>
+    <div class="row">
+      <label class="f"><span>Max cast names</span><input type="number" id="setCast" value="${s.max_cast}"></label>
+      <label class="f"><span>Max genres</span><input type="number" id="setGenres" value="${s.max_genres}"></label>
+    </div>
+    <label class="f"><span>Default language</span><input id="setLang" value="${esc(s.default_language)}"></label>
+    <label class="f"><span>Hashtag template</span><input id="setHash" value="${esc(s.hashtag_template)}"></label>
+    <label class="f"><span>TMDB API key (optional — fills synopsis, cast, rating, trailer)</span>
+      <input id="setTmdb" value="${s.tmdb_configured?'•••••••• configured':''}" placeholder="paste key, then Save"></label>
+    <p class="hint">Free key: themoviedb.org → Settings → API. Stored locally in config.json.</p>
+    <h2 class="sec" style="margin-top:16px">Emoji</h2>
+    <div class="emoji-grid">
+      ${iconFields.map(([k,label])=>`<label class="f"><span>${label}</span><input data-icon="${k}" value="${esc(icons[k]||'')}"></label>`).join('')}
+    </div>
+    <div class="tools">
+      <button class="btn primary" id="btnSaveSettings">Save settings</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+  $('#btnSaveSettings').onclick = async () => {
+    const iconsPatch = {};
+    $$('[data-icon]').forEach(i=>iconsPatch[i.dataset.icon] = i.value);
+    const tmdbVal = $('#setTmdb').value.trim();
+    const payload = {
+      brand: $('#setBrand').value, cta_tail: $('#setTail').value,
+      cta_template: $('#setCta').value, default_style: $('#setStyle').value,
+      default_length: $('#setLength').value, max_cast: +$('#setCast').value,
+      max_genres: +$('#setGenres').value, default_language: $('#setLang').value,
+      hashtag_template: $('#setHash').value, icons: iconsPatch
+    };
+    if (tmdbVal && !tmdbVal.startsWith('•')) payload.tmdb_api_key = tmdbVal;
+    try{
+      state.settings = await api('/api/settings', {method:'POST', body: JSON.stringify(payload)});
+      state.options.style = state.settings.default_style;
+      state.options.length = state.settings.default_length;
+      $('#brandPill').textContent = state.settings.brand;
+      closeModal(); toast('Settings saved');
+      if (state.selected) render();
+    }catch(e){ toast(e.message); }
+  };
+}
+
+$('#btnSettings').onclick = ()=>openSettings();
+
+/* ---------------- import / reload catalogs ---------------- */
+$('#btnImport').onclick = ()=> $('#csvFile').click();
+$('#csvFile').onchange = async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';                      /* allow re-picking the same file */
+  if (!file) return;
+  toast('Importing ' + file.name + '…', 15000);
+  const fd = new FormData();
+  fd.append('file', file);
+  try{
+    const res = await fetch('/api/catalogs', {method:'POST', body: fd});
+    if (!res.ok){
+      let msg = res.statusText;
+      try{ msg = (await res.json()).detail || msg; }catch(err){}
+      throw new Error(msg);
+    }
+    const r = await res.json();
+    await Promise.all([loadStats(), loadGenres(), loadList()]);
+    if (r.loaded)
+      toast(`Imported ${r.file} — library now ${r.stats.titles} titles`, 5000);
+    else
+      toast(`Warning: ${r.file} was skipped — it doesn't match the scanner format ` +
+            `(needs full_path, media_type, resolution_label, directory_path and ≥50 rows)`, 9000);
+  }catch(err){ toast('Import failed: ' + err.message, 6000); }
+};
+$('#btnReload').onclick = async () => {
+  toast('Reloading catalogs…', 15000);
+  try{
+    const r = await api('/api/reload', {method:'POST', body: '{}'});
+    await Promise.all([loadStats(), loadGenres(), loadList()]);
+    toast(`Reloaded — ${r.stats.titles} titles from ${r.sources.length} catalog(s)`, 4000);
+  }catch(e){ toast(e.message); }
+};
+
+/* ---------------- dead trailer links ---------------- */
+$('#btnTrailers').onclick = async () => {
+  toast('Checking trailer links against YouTube…', 120000);
+  try{
+    const r = await api('/api/trailers/check', {method:'POST', body:'{}'});
+    if (!r.checked){ toast('No trailer links stored yet — fetch one from TMDB first.', 5000); return; }
+    if (!r.dead.length){ toast(`All ${r.checked} trailer links are good ✓`, 4000); return; }
+    openModal(`
+      <button class="btn sm close" onclick="closeModal()">Close</button>
+      <h3>Dead trailer links</h3>
+      <p class="small">${r.dead.length} of ${r.checked} trailer links no longer work on YouTube.
+        Fix fetches a fresh official trailer when a TMDB key is set (Settings → TMDB),
+        otherwise removes the link so the caption warns you instead of posting a dead URL.</p>
+      ${r.dead.map(d=>`<div class="dupe">
+        <div class="nm">${esc(d.name)}</div><span class="small">${esc(d.url)}</span>
+      </div>`).join('')}
+      <div class="tools">
+        <button class="btn primary" id="btnFixTrailers">Fix ${r.dead.length} link(s)</button>
+      </div>`);
+    $('#btnFixTrailers').onclick = async () => {
+      toast('Fixing trailer links…', 120000);
+      try{
+        const f = await api('/api/trailers/fix', {method:'POST', body:'{}'});
+        closeModal();
+        toast(`${f.replaced.length} replaced, ${f.removed.length} removed`, 6000);
+        await loadList();
+        if (state.selected) render();
+      }catch(e){ toast('Fix failed: '+e.message, 6000); }
+    };
+  }catch(e){ toast('Trailer check failed: '+e.message, 6000); }
+};
+
+let jobTimer;
+$('#btnBatch').onclick = async ()=>{
+  clearTimeout(jobTimer);
+  openModal(`
+    <button class="btn sm close" onclick="closeModal()">Close</button>
+    <h3>Export workspace</h3>
+    <p class="small">Background generation uses your saved title edits and current caption settings. Jobs survive closing this dialog; unfinished jobs are marked interrupted after a server restart.</p>
+    <div class="row">
+      <label class="f"><span>Search title, genre or year</span><input id="bq" value="${esc(state.q)}"></label>
+      <label class="f"><span>Type</span><select id="bkind"><option value="">All</option><option value="movie">Movies</option><option value="series">Series</option></select></label>
+      <label class="f"><span>Maximum titles</span><input id="bLimit" type="number" min="1" max="5000" value="1000"></label>
+    </div>
+    <p class="small">Export filters above are separate from the library's advanced filters.</p>
+    <div class="tools">${['txt','md','html','json','csv'].map(f=>`<label><input type="checkbox" name="format" value="${f}" ${['txt','csv'].includes(f)?'checked':''}> ${f.toUpperCase()}</label>`).join('')}</div>
+    <div class="tools"><button class="btn primary" id="bGo">Start export</button></div>
+    <div id="bOut" style="margin-top:16px" aria-live="polite"></div>`);
+  $('#bkind').value=state.kind;
+  $('#bGo').onclick = async()=>{
+    const button=$('#bGo');button.disabled=true;
+    try{
+      // Unsaved overrides belong to the selected title, not every title in this batch.
+      const options={...state.options,overrides:{}};
+      await api('/api/jobs',{method:'POST',body:JSON.stringify({q:$('#bq').value,
+        kind:$('#bkind').value,limit:Number($('#bLimit').value),options,
+        formats:$$('input[name="format"]:checked').map(x=>x.value)})});
+      toast('Export queued'); await refreshJobs();
+    }catch(e){toast(e.message,5000);}finally{button.disabled=false;}
+  };
+  await refreshJobs();
+};
+async function refreshJobs(){
+  clearTimeout(jobTimer);
+  if(!$('#bOut') || !$('#modal').classList.contains('open')) return;
+  try{
+    const jobs=await api('/api/jobs');
+    if(!$('#bOut')) return;
+    $('#bOut').innerHTML=jobs.length ? jobs.map(j=>`<div class="card" style="margin-bottom:10px">
+      <div class="meta-row"><b>${esc(j.status)}</b><span class="pill">${j.completed} / ${j.total} titles</span><span class="small">${esc(j.created_at.slice(0,19).replace('T',' '))} UTC</span></div>
+      <progress value="${j.completed}" max="${j.total}" aria-label="Export progress"></progress>
+      ${j.error?`<p class="small">${esc(j.error)}</p>`:''}
+      ${j.status==='completed'?`<a class="btn sm" href="/api/jobs/${j.id}/download">Download ZIP · ${esc(j.formats.join(', '))}</a>`:''}
+      ${['queued','running'].includes(j.status)?`<button class="btn sm cancel-job" data-id="${j.id}">Cancel</button>`:''}
+      </div>`).join('') : '<p class="small">No exports yet. Start your first batch above.</p>';
+    $$('.cancel-job').forEach(b=>b.onclick=async()=>{
+      try{await api('/api/jobs/'+b.dataset.id+'/cancel',{method:'POST'}); await refreshJobs();}catch(e){toast(e.message);}
+    });
+    if(jobs.some(j=>['queued','running'].includes(j.status))) jobTimer=setTimeout(refreshJobs,800);
+  }catch(e){toast(e.message);}
+}
+$('#btnBackups').onclick=async()=>{
+  openModal(`<button class="btn sm close" onclick="closeModal()">Close</button><h3>Backups & recovery</h3>
+    <p class="small">Snapshots include local CSV catalogs, metadata, edits and configuration. They do not include media files or exports. Backups may contain API keys and private file paths: store downloads securely.</p>
+    <p class="small">Automatic snapshots run once per day at startup and before imports/restores. The latest 10 automatic snapshots are retained; manual snapshots are kept.</p>
+    <button class="btn primary" id="newBackup">Create snapshot</button><div id="backupList" style="margin-top:16px"></div>`);
+  $('#newBackup').onclick=async()=>{
+    const b=$('#newBackup');b.disabled=true;
+    try{await api('/api/backups',{method:'POST'});toast('Snapshot created');await refreshBackups();}catch(e){toast(e.message);}finally{b.disabled=false;}
+  };
+  await refreshBackups();
+};
+async function refreshBackups(){
+  try{
+    const items=await api('/api/backups');
+    if(!$('#backupList')) return;
+    $('#backupList').innerHTML=items.map(b=>`<div class="dupe"><div class="nm">${esc(b.id)}<br><span class="small">${(b.bytes/1024).toFixed(1)} KB</span></div>
+      <a class="btn sm" href="/api/backups/${b.id}/download">Download</a>
+      <button class="btn sm restore" data-id="${b.id}">Restore</button></div>`).join('') || '<p class="small">No snapshots yet.</p>';
+    $$('.restore').forEach(b=>b.onclick=async()=>{
+      if(prompt('Restore this snapshot? This replaces current catalogs, settings and edits. A safety backup is created first. Type RESTORE to confirm.')!=='RESTORE') return;
+      b.disabled=true;
+      try{
+        await api('/api/backups/'+b.dataset.id+'/restore',{method:'POST',body:JSON.stringify({confirm:'RESTORE'})});
+        closeModal();state.selected=null;$('#content').innerHTML='<div class="empty">Snapshot restored. Select a title to continue.</div>';
+        await Promise.all([loadStats(),loadGenres(),loadFacets()]);await loadList();toast('Snapshot restored');
+      }catch(e){toast(e.message,6000);b.disabled=false;}
+    });
+  }catch(e){toast(e.message);}
+}
+
+$('#btnDupes').onclick = async ()=>{
+  openModal(`<button class="btn sm close" onclick="closeModal()">Close</button>
+    <h3>Possible duplicates</h3><p class="small">Loading…</p>`);
+  try{
+    const pairs = await api('/api/duplicates?cutoff=0.9');
+    openModal(`
+      <button class="btn sm close" onclick="closeModal()">Close</button>
+      <h3>Possible duplicates</h3>
+      ${pairs.length? `<p class="small">Same show filed under two names. Merging keeps both sets of files under one title.</p>
+        ${pairs.map(p=>`<div class="dupe">
+          <div class="nm">${esc(p.a_name)} <span class="small">↔</span> ${esc(p.b_name)}
+            <span class="pill">${p.score}</span></div>
+          <button class="btn sm" data-keep="${p.a}" data-merge="${p.b}">Merge → left</button>
+          <button class="btn sm" data-keep="${p.b}" data-merge="${p.a}">Merge → right</button>
+        </div>`).join('')}`
+        : '<p class="small">Nothing suspicious found.</p>'}
+    `);
+    $$('[data-keep]').forEach(b=>b.onclick = async ()=>{
+      try{
+        await api('/api/merge', {method:'POST', body: JSON.stringify({
+          keep: b.dataset.keep, merge: b.dataset.merge})});
+        toast('Merged'); await loadList(); closeModal();
+      }catch(e){ toast(e.message); }
+    });
+  }catch(e){ openModal('<h3>Possible duplicates</h3><p class="small">'+esc(e.message)+'</p>'); }
+};
+
+/* ---------------- boot ---------------- */
+(async function boot(){
+  await loadStats();
+  await loadGenres(); await loadFacets();
+  state.options.style = state.settings.default_style || 'classic';
+  state.options.length = state.settings.default_length || 'full';
+  await loadFacets();
+  await loadList();
+})();
+</script>
+</body>
+</html>

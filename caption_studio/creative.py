@@ -656,3 +656,7 @@ def condense_overview(text: str, max_sentences: int = 2, max_chars: int = 240) -
     if len(out) > max_chars:
         out = out[:max_chars].rsplit(" ", 1)[0] + "…"
     return out
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

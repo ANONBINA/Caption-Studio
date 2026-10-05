@@ -166,3 +166,7 @@ def test_duplicate_candidates_flag_typos():
     pairs = duplicate_candidates(titles, cutoff=0.9)
     flagged = {(p["a_name"], p["b_name"]) for p in pairs}
     assert any("13 Reason" in a and "13 Reason" in b for a, b in flagged)
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

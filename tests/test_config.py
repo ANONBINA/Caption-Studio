@@ -60,3 +60,7 @@ def test_sections_partial_override(tmp_path):
     cfg = Config.load(str(path))
     assert cfg.sections["trailer"] is False
     assert cfg.sections["synopsis"] is True
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

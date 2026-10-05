@@ -111,3 +111,7 @@ def test_deterministic_output(cfg, movie):
     a = build_caption(movie, cfg, opts(cfg, variant=0)).text
     b = build_caption(movie, cfg, opts(cfg, variant=0)).text
     assert a == b
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master

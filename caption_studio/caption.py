@@ -321,3 +321,7 @@ def limit_report(text: str, cfg: Config) -> List[Dict[str, Any]]:
             continue
         report.append({"platform": name, "limit": cap, "chars": n, "fits": n <= cap})
     return report
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master
